@@ -47,11 +47,11 @@ const QUAL_QUESTIONS = [
   'Wie heißt du und für welches Unternehmen bist du tätig?',
   'Wie lautet deine E-Mail-Adresse und Telefonnummer?',
   'Was ist die URL deiner Website?',
-  'Aus welcher Branche kommt dein Unternehmen?',
-  'Welches Support-System nutzt du aktuell?',
+  'In welcher Branche bist du tätig?',
+  'Wie handhabst du aktuell deinen Kundensupport?',
   'Wie viele Mitarbeiter habt ihr im Kundenservice?',
-  'Wie viele Support-Anfragen erhaltet ihr monatlich?',
-  'Was ist euer Hauptziel beim Einsatz eines KI-Chatbots?',
+  'Wie viele Support-Anfragen bekommt ihr pro Monat?',
+  'Was ist dein Hauptziel mit einem KI-Chatbot?',
 ]
 
 const QUAL_CHIPS: { label: string; field: QualKey }[][] = [
@@ -228,18 +228,17 @@ export default function ChatWidget() {
   // ── Booking send (called after qual completion) ────────────────────────────
 
   const sendBooking = async (finalQual: QualData, slot: Slot) => {
-    const text = `Ich möchte den Termin am ${slot.datum} um ${slot.uhrzeit} Uhr buchen`
-    setMessages(prev => [...prev, { id: Date.now(), role: 'user', text }])
     setLoading(true)
     try {
       const res = await fetch('https://mctecommerce.app.n8n.cloud/webhook/bot-space-chatbot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nachricht: text,
+          nachricht: 'Termin buchen',
           session_id: sessionId,
           kunde: 'padel-heintz',
           qualifizierung: finalQual,
+          extraktion: { datum: slot.datum, uhrzeit: slot.uhrzeit },
         }),
       })
       const data = await res.json()

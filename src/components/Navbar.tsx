@@ -37,7 +37,7 @@ export default function Navbar() {
           <a href="#" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
             <img
               src="/Logo-Text.png"
-              alt="Bot-Space Logo"
+              alt="Bot Space Logo"
               style={{ height: 64, width: 'auto', objectFit: 'contain' }}
             />
           </a>

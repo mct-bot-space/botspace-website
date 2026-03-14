@@ -4,15 +4,28 @@ interface Message {
   id: number
   role: 'bot' | 'user'
   text: string
+  image?: string // base64 data URL
 }
 
+// --- Sanitize user input ---
 function sanitize(raw: string): string {
-  return raw
-    .replace(/</g, '')
-    .replace(/>/g, '')
-    .trim()
-    .slice(0, 500)
+  return raw.replace(/</g, '').replace(/>/g, '').trim().slice(0, 500)
 }
+
+// --- Simple Markdown renderer (no external deps) ---
+function renderMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br />')
+}
+
+const QUICK_REPLIES = [
+  'Was kostet ein Chatbot?',
+  'Welche Pakete gibt es?',
+  'Wie läuft die Umsetzung ab?',
+  'Demo-Gespräch vereinbaren',
+]
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false)
@@ -21,15 +34,20 @@ export default function ChatWidget() {
     {
       id: 1,
       role: 'bot',
-      text: 'Hallo! Ich bin der Bot-Space Assistent. Wie kann ich dir helfen?',
+      text: 'Hallo! Ich bin der Bot Space Assistent.\n\nIch beantworte deine Fragen zu KI-Chatbots, unseren Paketen und Preisen — direkt und ohne Wartezeit.\n\nWomit kann ich dir helfen?',
     },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [userHasSent, setUserHasSent] = useState(false)
+  const [quickRepliesUsed, setQuickRepliesUsed] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Teaser-Bubble nach 3 Sekunden anzeigen, verschwindet nach 9 Sek.
+  // Teaser-Bubble nach 3 Sekunden, verschwindet nach 9 Sek.
   useEffect(() => {
     const showTimer = setTimeout(() => setShowTeaser(true), 3000)
     const hideTimer = setTimeout(() => setShowTeaser(false), 9000)
@@ -47,49 +65,85 @@ export default function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  const sendMessage = async () => {
-    const text = sanitize(input)
+  // --- Image handling ---
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageError(null)
+    if (file.size > 5 * 1024 * 1024) {
+      setImageError('Bild zu groß (max. 5 MB).')
+      e.target.value = ''
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setImagePreview(reader.result as string)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const removeImage = () => {
+    setImagePreview(null)
+    setImageError(null)
+  }
+
+  // --- Send message ---
+  const sendMessage = async (overrideText?: string) => {
+    const raw = overrideText ?? input
+    const text = sanitize(raw)
     if (!text || loading) return
 
-    const userMsg: Message = { id: Date.now(), role: 'user', text }
+    if (!userHasSent) setUserHasSent(true)
+
+    const userMsg: Message = {
+      id: Date.now(),
+      role: 'user',
+      text,
+      ...(imagePreview ? { image: imagePreview } : {}),
+    }
     setMessages(prev => [...prev, userMsg])
     setInput('')
+    setImagePreview(null)
+    setImageError(null)
     setLoading(true)
 
     try {
+      const body: Record<string, string> = { nachricht: text, kunde: 'padel-heintz' }
+      if (imagePreview) body.bild = imagePreview
+
       const res = await fetch(
         'https://mctecommerce.app.n8n.cloud/webhook/bot-space-chatbot',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nachricht: text, kunde: 'padel-heintz' }),
+          body: JSON.stringify(body),
         }
       )
-
       const data = await res.json()
       const reply = data?.antwort || 'Ich konnte leider keine Antwort erhalten.'
-
-      setMessages(prev => [
-        ...prev,
-        { id: Date.now() + 1, role: 'bot', text: reply },
-      ])
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'bot', text: reply }])
     } catch {
       setMessages(prev => [
         ...prev,
-        {
-          id: Date.now() + 1,
-          role: 'bot',
-          text: 'Verbindungsfehler – bitte versuche es erneut.',
-        },
+        { id: Date.now() + 1, role: 'bot', text: 'Verbindungsfehler – bitte versuche es erneut.' },
       ])
     } finally {
       setLoading(false)
     }
   }
 
+  const handleQuickReply = (text: string) => {
+    setQuickRepliesUsed(true)
+    sendMessage(text)
+  }
+
   const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') sendMessage()
   }
+
+  // Show quick replies: after first user msg sent, last msg is from bot, chips not yet used
+  const lastMsg = messages[messages.length - 1]
+  const showQuickReplies =
+    userHasSent && !quickRepliesUsed && !loading && lastMsg?.role === 'bot'
 
   return (
     <>
@@ -126,8 +180,8 @@ export default function ChatWidget() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: 40,
+                  height: 40,
                   borderRadius: '50%',
                   background: 'rgba(255,255,255,0.15)',
                   display: 'flex',
@@ -138,14 +192,14 @@ export default function ChatWidget() {
                 }}
               >
                 <img
-                  src="/Logo-Main.png"
-                  alt="Bot-Space Logo"
-                  style={{ width: 26, height: 26, objectFit: 'contain' }}
+                  src="/Logo-Main-White.png"
+                  alt="Bot Space Logo"
+                  style={{ height: 32, width: 'auto', objectFit: 'contain' }}
                 />
               </div>
               <div>
                 <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
-                  Bot-Space Assistent
+                  Bot Space Assistent
                 </div>
                 <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12 }}>
                   Antwortet sofort
@@ -185,34 +239,42 @@ export default function ChatWidget() {
               background: '#f8faff',
             }}
           >
-            {messages.map(msg => (
-              <div
-                key={msg.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                }}
-              >
+            {messages.map((msg, idx) => (
+              <div key={msg.id}>
                 <div
                   style={{
-                    maxWidth: '78%',
-                    padding: '10px 14px',
-                    borderRadius:
-                      msg.role === 'user'
-                        ? '18px 18px 4px 18px'
-                        : '18px 18px 18px 4px',
-                    background: msg.role === 'user' ? '#1A73E8' : '#fff',
-                    color: msg.role === 'user' ? '#fff' : '#1a1a2e',
-                    fontSize: 14,
-                    lineHeight: 1.5,
-                    boxShadow:
-                      msg.role === 'bot'
-                        ? '0 1px 4px rgba(0,0,0,0.08)'
-                        : 'none',
-                    wordBreak: 'break-word',
+                    display: 'flex',
+                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
                   }}
                 >
-                  {msg.text}
+                  <div
+                    style={{
+                      maxWidth: '78%',
+                      padding: idx === 0 ? '12px 14px' : '10px 14px',
+                      borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                      background: msg.role === 'user' ? '#1A73E8' : '#fff',
+                      color: msg.role === 'user' ? '#fff' : '#1a1a2e',
+                      fontSize: 14,
+                      lineHeight: 1.55,
+                      boxShadow: msg.role === 'bot' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                      wordBreak: 'break-word',
+                      borderTop: idx === 0 ? '3px solid #1A73E8' : undefined,
+                    }}
+                  >
+                    {/* Image attachment preview in message */}
+                    {msg.image && (
+                      <img
+                        src={msg.image}
+                        alt="Anhang"
+                        style={{ width: '100%', maxWidth: 200, borderRadius: 8, marginBottom: 6, display: 'block' }}
+                      />
+                    )}
+                    {msg.role === 'bot' ? (
+                      <span dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }} />
+                    ) : (
+                      msg.text
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -235,11 +297,8 @@ export default function ChatWidget() {
                     <span
                       key={i}
                       style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        background: '#1A73E8',
-                        display: 'inline-block',
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: '#1A73E8', display: 'inline-block',
                         animation: 'botDot 1.2s infinite',
                         animationDelay: `${i * 0.2}s`,
                         opacity: 0.4,
@@ -249,64 +308,158 @@ export default function ChatWidget() {
                 </div>
               </div>
             )}
+
+            {/* Quick Reply Chips */}
+            {showQuickReplies && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
+                {QUICK_REPLIES.map(q => (
+                  <button
+                    key={q}
+                    onClick={() => handleQuickReply(q)}
+                    style={{
+                      background: '#fff',
+                      border: '1.5px solid #1A73E8',
+                      borderRadius: 20,
+                      padding: '6px 13px',
+                      fontSize: 13,
+                      color: '#1A73E8',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s, color 0.15s',
+                      fontWeight: 500,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = '#1A73E8'
+                      e.currentTarget.style.color = '#fff'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = '#fff'
+                      e.currentTarget.style.color = '#1A73E8'
+                    }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
+          {/* Input Area */}
           <div
             style={{
-              padding: '12px 14px',
+              padding: '10px 14px 12px',
               borderTop: '1px solid #eef0f5',
               display: 'flex',
+              flexDirection: 'column',
               gap: 8,
               background: '#fff',
               flexShrink: 0,
             }}
           >
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder="Nachricht schreiben…"
-              disabled={loading}
-              maxLength={500}
-              style={{
-                flex: 1,
-                border: '1.5px solid #e0e7ef',
-                borderRadius: 10,
-                padding: '10px 14px',
-                fontSize: 14,
-                outline: 'none',
-                background: loading ? '#f5f5f5' : '#fff',
-                color: '#1a1a2e',
-                transition: 'border-color 0.2s',
-              }}
-              onFocus={e => (e.currentTarget.style.borderColor = '#1A73E8')}
-              onBlur={e => (e.currentTarget.style.borderColor = '#e0e7ef')}
-            />
-            <button
-              onClick={sendMessage}
-              disabled={loading || !input.trim()}
-              style={{
-                background: loading || !input.trim() ? '#b0c8f5' : '#1A73E8',
-                border: 'none',
-                borderRadius: 10,
-                width: 42,
-                height: 42,
-                cursor: loading || !input.trim() ? 'default' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'background 0.2s',
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-              </svg>
-            </button>
+            {/* Image preview thumbnail */}
+            {imagePreview && (
+              <div style={{ position: 'relative', width: 60 }}>
+                <img
+                  src={imagePreview}
+                  alt="Vorschau"
+                  style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, display: 'block', border: '1.5px solid #e0e7ef' }}
+                />
+                <button
+                  onClick={removeImage}
+                  style={{
+                    position: 'absolute', top: -6, right: -6,
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: '#ef4444', border: 'none',
+                    color: '#fff', fontSize: 11, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    lineHeight: 1,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Image error */}
+            {imageError && (
+              <div style={{ fontSize: 12, color: '#ef4444' }}>{imageError}</div>
+            )}
+
+            {/* Input row */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {/* Paperclip button */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                title="Bild anhängen"
+                style={{
+                  background: 'none', border: '1.5px solid #e0e7ef',
+                  borderRadius: 10, width: 40, height: 40,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', flexShrink: 0, color: '#6b7280',
+                  transition: 'border-color 0.2s, color 0.2s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = '#1A73E8'
+                  e.currentTarget.style.color = '#1A73E8'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = '#e0e7ef'
+                  e.currentTarget.style.color = '#6b7280'
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66L9.41 17.41a2 2 0 01-2.83-2.83l8.49-8.48" />
+                </svg>
+              </button>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKey}
+                placeholder="Nachricht schreiben…"
+                disabled={loading}
+                maxLength={500}
+                style={{
+                  flex: 1, border: '1.5px solid #e0e7ef',
+                  borderRadius: 10, padding: '10px 14px',
+                  fontSize: 14, outline: 'none',
+                  background: loading ? '#f5f5f5' : '#fff',
+                  color: '#1a1a2e', transition: 'border-color 0.2s',
+                }}
+                onFocus={e => (e.currentTarget.style.borderColor = '#1A73E8')}
+                onBlur={e => (e.currentTarget.style.borderColor = '#e0e7ef')}
+              />
+
+              <button
+                onClick={() => sendMessage()}
+                disabled={loading || (!input.trim() && !imagePreview)}
+                style={{
+                  background: loading || (!input.trim() && !imagePreview) ? '#b0c8f5' : '#1A73E8',
+                  border: 'none', borderRadius: 10,
+                  width: 42, height: 42,
+                  cursor: loading || (!input.trim() && !imagePreview) ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', flexShrink: 0,
+                  transition: 'background 0.2s',
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -340,35 +493,19 @@ export default function ChatWidget() {
         <div style={{ position: 'relative', width: 58, height: 58 }}>
           {!open && (
             <>
-              <span style={{
-                position: 'absolute', inset: 0,
-                borderRadius: '50%',
-                background: 'rgba(26,115,232,0.25)',
-                animation: 'pulseRing 2s ease-out infinite',
-              }} />
-              <span style={{
-                position: 'absolute', inset: 0,
-                borderRadius: '50%',
-                background: 'rgba(26,115,232,0.15)',
-                animation: 'pulseRing 2s ease-out infinite 0.6s',
-              }} />
+              <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(26,115,232,0.25)', animation: 'pulseRing 2s ease-out infinite' }} />
+              <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(26,115,232,0.15)', animation: 'pulseRing 2s ease-out infinite 0.6s' }} />
             </>
           )}
           <button
             onClick={() => setOpen(prev => !prev)}
             aria-label="Chat öffnen"
             style={{
-              position: 'relative',
-              width: 58,
-              height: 58,
-              borderRadius: '50%',
-              background: '#1A73E8',
-              border: 'none',
-              cursor: 'pointer',
+              position: 'relative', width: 58, height: 58,
+              borderRadius: '50%', background: '#1A73E8',
+              border: 'none', cursor: 'pointer',
               boxShadow: '0 4px 20px rgba(26,115,232,0.45)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'transform 0.2s, box-shadow 0.2s',
             }}
             onMouseEnter={e => {

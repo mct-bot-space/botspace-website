@@ -41,7 +41,7 @@ export default function ChatWidget() {
 
     try {
       const res = await fetch(
-        'https://mctecommerce.app.n8n.cloud/webhook-test/bot-space-chatbot',
+        'https://mctecommerce.app.n8n.cloud/webhook/bot-space-chatbot',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

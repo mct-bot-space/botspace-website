@@ -43,6 +43,7 @@ function sanitize(raw: string): string {
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false)
+  const [showTeaser, setShowTeaser] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -56,9 +57,17 @@ export default function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Teaser-Bubble nach 3 Sekunden anzeigen, verschwindet nach 6 Sek.
+  useEffect(() => {
+    const showTimer = setTimeout(() => setShowTeaser(true), 3000)
+    const hideTimer = setTimeout(() => setShowTeaser(false), 9000)
+    return () => { clearTimeout(showTimer); clearTimeout(hideTimer) }
+  }, [])
+
   // Prüfe Rate-Limit beim Öffnen des Chats
   useEffect(() => {
     if (open) {
+      setShowTeaser(false)
       setRateLimited(isRateLimited())
       setTimeout(() => inputRef.current?.focus(), 100)
     }
@@ -159,16 +168,19 @@ export default function ChatWidget() {
                   width: 36,
                   height: 36,
                   borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.2)',
+                  background: 'rgba(255,255,255,0.15)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  overflow: 'hidden',
+                  flexShrink: 0,
                 }}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
-                  <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.07L2 22l4.93-1.38C8.42 21.5 10.15 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.71 0-3.3-.49-4.65-1.33L4 20l1.33-3.35C4.49 15.3 4 13.71 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z" />
-                </svg>
+                <img
+                  src="/Logo-Main.png"
+                  alt="Bot-Space Logo"
+                  style={{ width: 26, height: 26, objectFit: 'contain' }}
+                />
               </div>
               <div>
                 <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
@@ -358,55 +370,103 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* Floating Button */}
-      <button
-        onClick={() => setOpen(prev => !prev)}
-        aria-label="Chat öffnen"
-        style={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          width: 58,
-          height: 58,
-          borderRadius: '50%',
-          background: '#1A73E8',
-          border: 'none',
-          cursor: 'pointer',
-          boxShadow: '0 4px 20px rgba(26,115,232,0.45)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          transition: 'transform 0.2s, box-shadow 0.2s',
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.transform = 'scale(1.08)'
-          e.currentTarget.style.boxShadow = '0 6px 28px rgba(26,115,232,0.55)'
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.transform = 'scale(1)'
-          e.currentTarget.style.boxShadow = '0 4px 20px rgba(26,115,232,0.45)'
-        }}
-      >
-        {open ? (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-          </svg>
-        ) : (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
-          </svg>
-        )}
-      </button>
+      {/* Floating Button + Pulse + Teaser */}
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
 
-      {/* Dot animation keyframes */}
+        {/* Teaser-Bubble */}
+        {showTeaser && !open && (
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '16px 16px 4px 16px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.14)',
+              padding: '10px 14px',
+              fontSize: 14,
+              color: '#1a1a2e',
+              maxWidth: 220,
+              lineHeight: 1.4,
+              animation: 'teaserIn 0.3s ease',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+            onClick={() => { setShowTeaser(false); setOpen(true) }}
+          >
+            👋 <strong>Hallo!</strong> Ich beantworte deine Fragen sofort.
+          </div>
+        )}
+
+        {/* Pulse-Ring + Button */}
+        <div style={{ position: 'relative', width: 58, height: 58 }}>
+          {!open && (
+            <>
+              <span style={{
+                position: 'absolute', inset: 0,
+                borderRadius: '50%',
+                background: 'rgba(26,115,232,0.25)',
+                animation: 'pulseRing 2s ease-out infinite',
+              }} />
+              <span style={{
+                position: 'absolute', inset: 0,
+                borderRadius: '50%',
+                background: 'rgba(26,115,232,0.15)',
+                animation: 'pulseRing 2s ease-out infinite 0.6s',
+              }} />
+            </>
+          )}
+          <button
+            onClick={() => setOpen(prev => !prev)}
+            aria-label="Chat öffnen"
+            style={{
+              position: 'relative',
+              width: 58,
+              height: 58,
+              borderRadius: '50%',
+              background: '#1A73E8',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(26,115,232,0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'scale(1.08)'
+              e.currentTarget.style.boxShadow = '0 6px 28px rgba(26,115,232,0.55)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(26,115,232,0.45)'
+            }}
+          >
+            {open ? (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+              </svg>
+            ) : (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Animations */}
       <style>{`
         @keyframes botDot {
           0%, 60%, 100% { opacity: 0.4; transform: scale(1); }
           30% { opacity: 1; transform: scale(1.3); }
         }
+        @keyframes pulseRing {
+          0%   { transform: scale(1);   opacity: 0.7; }
+          100% { transform: scale(1.9); opacity: 0; }
+        }
+        @keyframes teaserIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         @media (max-width: 480px) {
-          /* Chat window full-width on very small screens */
           .chat-window-mobile {
             width: calc(100vw - 32px) !important;
             right: 16px !important;

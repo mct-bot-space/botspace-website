@@ -18,7 +18,7 @@ export default function Footer() {
               <img
                 src="/Logo-Text-White.png"
                 alt="Bot Space Logo"
-                style={{ height: 48, width: 'auto', objectFit: 'contain' }}
+                style={{ height: 64, width: 'auto', objectFit: 'contain' }}
               />
             </div>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>

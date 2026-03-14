@@ -34,7 +34,7 @@ type QualKey = keyof QualData
 
 const GREETING_ID = 1
 const GREETING_TEXT =
-  '👋 Hallo! Ich bin der BotSpace Assistent.\n\n🤖 Ich beantworte deine Fragen zu KI-Chatbots, unseren Paketen und Preisen — direkt und ohne Wartezeit.\n\nWomit kann ich dir helfen?'
+  '👋 Hallo! Ich bin der Bot Space Assistent.\n\n🤖 Ich beantworte deine Fragen zu KI-Chatbots, unseren Paketen und Preisen — direkt und ohne Wartezeit.\n\nWomit kann ich dir helfen?'
 
 const QUICK_REPLIES = [
   'Was kostet ein Chatbot?',
@@ -161,41 +161,33 @@ function Chip({ label, onClick }: { label: string; onClick: () => void }) {
 // ─── ChatWidget ───────────────────────────────────────────────────────────────
 
 export default function ChatWidget() {
-  // Session ID — stable across reloads
-  const [sessionId] = useState<string>(() => getOrCreateSessionId())
-
-  // UI
+  const [sessionId]   = useState<string>(() => getOrCreateSessionId())
   const [open, setOpen]             = useState(false)
   const [showTeaser, setShowTeaser] = useState(false)
 
-  // Messages — restored from localStorage on mount
-  const [messages, setMessages] = useState<Message[]>(() => {
-    return loadSavedMessages() ?? [{ id: GREETING_ID, role: 'bot', text: GREETING_TEXT }]
-  })
+  const [messages, setMessages] = useState<Message[]>(() =>
+    loadSavedMessages() ?? [{ id: GREETING_ID, role: 'bot', text: GREETING_TEXT }]
+  )
 
-  // Input
-  const [input, setInput]         = useState('')
-  const [loading, setLoading]     = useState(false)
-  const [imagePreview, setImg]    = useState<string | null>(null)
-  const [imageError, setImgErr]   = useState<string | null>(null)
+  const [input, setInput]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [imagePreview, setImg]  = useState<string | null>(null)
+  const [imageError, setImgErr] = useState<string | null>(null)
 
-  // Greeting chips — hidden once user sent any message (also restored from history)
-  const [greetingChipsUsed, setGreetingChipsUsed] = useState<boolean>(() => {
-    const saved = loadSavedMessages()
-    return saved?.some(m => m.role === 'user') ?? false
-  })
+  const [greetingChipsUsed, setGreetingChipsUsed] = useState<boolean>(() =>
+    loadSavedMessages()?.some(m => m.role === 'user') ?? false
+  )
 
   // Webhook action state
   const [activeAktion, setActiveAktion] = useState<string | null>(null)
   const [activeSlots, setActiveSlots]   = useState<Slot[]>([])
-  const [pendingSlots, setPendingSlots] = useState<Slot[]>([])
 
-  // Qualification flow — 0=inactive, 1-8=current step
-  const [qualStep, setQualStep]     = useState(0)
-  const [qualDone, setQualDone]     = useState(false)
-  const [qualData, setQualData]     = useState<QualData>(EMPTY_QUAL)
+  // Qualification flow
+  const [qualStep, setQualStep]   = useState(0)   // 0=inactive, 1–8=current step
+  const [qualDone, setQualDone]   = useState(false)
+  const [qualData, setQualData]   = useState<QualData>(EMPTY_QUAL)
+  const [pendingSlot, setPendingSlot] = useState<Slot | null>(null)
 
-  // Refs
   const bottomRef    = useRef<HTMLDivElement>(null)
   const inputRef     = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -216,7 +208,6 @@ export default function ChatWidget() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  // Persist chat history (max 50 messages)
   useEffect(() => {
     localStorage.setItem('botspace_chat_history', JSON.stringify(messages.slice(-50)))
   }, [messages])
@@ -234,10 +225,44 @@ export default function ChatWidget() {
     e.target.value = ''
   }
 
+  // ── Booking send (called after qual completion) ────────────────────────────
+
+  const sendBooking = async (finalQual: QualData, slot: Slot) => {
+    const text = `Ich möchte den Termin am ${slot.datum} um ${slot.uhrzeit} Uhr buchen`
+    setMessages(prev => [...prev, { id: Date.now(), role: 'user', text }])
+    setLoading(true)
+    try {
+      const res = await fetch('https://mctecommerce.app.n8n.cloud/webhook/bot-space-chatbot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nachricht: text,
+          session_id: sessionId,
+          kunde: 'padel-heintz',
+          qualifizierung: finalQual,
+        }),
+      })
+      const data = await res.json()
+      if (data?.aktion === 'termin_gebucht') {
+        localStorage.setItem('botspace_bookings_count', '1')
+      }
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1, role: 'bot',
+        text: data?.antwort ?? '✅ Dein Termin wurde bestätigt! Wir melden uns per E-Mail.',
+      }])
+    } catch {
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1, role: 'bot',
+        text: 'Verbindungsfehler – bitte versuche es erneut.',
+      }])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // ── Qualification helpers ──────────────────────────────────────────────────
 
-  // Called after each qual answer; advances to next step or completes flow
-  const advanceQual = (updated: QualData, fromStep: number) => {
+  const advanceQual = (updated: QualData, fromStep: number, slot: Slot) => {
     const next = fromStep + 1
     if (next <= 8) {
       setQualStep(next)
@@ -245,31 +270,24 @@ export default function ChatWidget() {
         setMessages(prev => [...prev, { id: Date.now(), role: 'bot', text: QUAL_QUESTIONS[next - 1] }])
       }, 300)
     } else {
-      // Qual complete → show slots
+      // Qual complete → send booking
       setQualStep(0)
       setQualDone(true)
       setQualData(updated)
-      setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          { id: Date.now(), role: 'bot', text: '🎉 Super, danke für deine Angaben!\n\nHier sind die verfügbaren Termine — wähle einfach deinen Wunschtermin:' },
-        ])
-        setActiveAktion('slots_anzeigen')
-        setActiveSlots(pendingSlots)
-      }, 300)
+      sendBooking(updated, slot)
     }
   }
 
-  // Chip click handler for qual steps 4-8
   const handleQualChip = (label: string, field: QualKey) => {
     const step = qualStep
+    const slot = pendingSlot!
     const updated: QualData = { ...qualData, [field]: label }
     setQualData(updated)
     setMessages(prev => [...prev, { id: Date.now(), role: 'user', text: label }])
-    advanceQual(updated, step)
+    advanceQual(updated, step, slot)
   }
 
-  // ── Slot selection ─────────────────────────────────────────────────────────
+  // ── Slot selection → start qual flow ──────────────────────────────────────
 
   const handleSlotSelect = (slot: Slot) => {
     const bookings = parseInt(localStorage.getItem('botspace_bookings_count') || '0')
@@ -282,11 +300,29 @@ export default function ChatWidget() {
       setActiveSlots([])
       return
     }
-    const text = `Ich möchte den Termin am ${slot.datum} um ${slot.uhrzeit} Uhr buchen`
-    sendMessage(text, { qualifizierung: qualData })
+
+    setPendingSlot(slot)
+    setActiveAktion(null)
+    setActiveSlots([])
+
+    if (qualDone) {
+      // Skip qual, book directly
+      sendBooking(qualData, slot)
+      return
+    }
+
+    // Add user selection bubble, then start qual
+    setMessages(prev => [...prev, { id: Date.now(), role: 'user', text: slot.label }])
+    setQualStep(1)
+    setTimeout(() => {
+      setMessages(prev => [...prev, {
+        id: Date.now(), role: 'bot',
+        text: 'Perfekt! 📅 Bevor ich deinen Termin verbindlich bestätige, habe ich noch ein paar kurze Fragen.\n\n' + QUAL_QUESTIONS[0],
+      }])
+    }, 300)
   }
 
-  // ── Send message ───────────────────────────────────────────────────────────
+  // ── Send message (webhook) ─────────────────────────────────────────────────
 
   const sendMessage = async (
     overrideText?: string,
@@ -298,10 +334,9 @@ export default function ChatWidget() {
 
     if (!greetingChipsUsed) setGreetingChipsUsed(true)
 
-    const imgToSend  = imagePreview
+    const imgToSend   = imagePreview
     const currentStep = qualStep
 
-    // Add user bubble
     setMessages(prev => [...prev, {
       id: Date.now(), role: 'user', text,
       ...(imgToSend ? { image: imgToSend } : {}),
@@ -310,7 +345,7 @@ export default function ChatWidget() {
     setImg(null)
     setImgErr(null)
 
-    // ── Qual flow: intercept free-text steps 1–3 ───────────────────────────
+    // ── Qual flow: intercept free-text steps 1–3 ──────────────────────────
     if (currentStep >= 1 && currentStep <= 3) {
       const updated = { ...qualData }
       if (currentStep === 1) {
@@ -325,7 +360,7 @@ export default function ChatWidget() {
         updated.website = text
       }
       setQualData(updated)
-      advanceQual(updated, currentStep)
+      advanceQual(updated, currentStep, pendingSlot!)
       return
     }
 
@@ -340,40 +375,27 @@ export default function ChatWidget() {
         session_id: sessionId,
         kunde: 'padel-heintz',
       }
-      if (imgToSend)     body.bild = imgToSend
-      if (extraPayload)  Object.assign(body, extraPayload)
+      if (imgToSend)   body.bild = imgToSend
+      if (extraPayload) Object.assign(body, extraPayload)
 
       const res  = await fetch('https://mctecommerce.app.n8n.cloud/webhook/bot-space-chatbot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = await res.json()
-      const reply:  string       = data?.antwort ?? 'Ich konnte leider keine Antwort erhalten.'
-      const aktion: string | null = data?.aktion  ?? null
-      const slots:  Slot[]       = Array.isArray(data?.slots) ? data.slots : []
+      const data  = await res.json()
+      const reply: string      = data?.antwort ?? 'Ich konnte leider keine Antwort erhalten.'
+      const aktion: string | null = data?.aktion ?? null
+      const slots: Slot[]      = Array.isArray(data?.slots) ? data.slots : []
 
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'bot', text: reply }])
 
       if (aktion === 'termin_gebucht') {
         localStorage.setItem('botspace_bookings_count', '1')
-        // no further chips
-
-      } else if (aktion === 'slots_anzeigen' && !qualDone) {
-        // Start qualification before showing slots
-        setPendingSlots(slots)
-        setQualStep(1)
-        setTimeout(() => {
-          setMessages(prev => [...prev, {
-            id: Date.now(), role: 'bot',
-            text: 'Bevor ich dir die Termine zeige, habe ich noch ein paar kurze Fragen. 📋\n\n' + QUAL_QUESTIONS[0],
-          }])
-        }, 300)
-
-      } else if (aktion === 'slots_anzeigen' && qualDone) {
+      } else if (aktion === 'slots_anzeigen') {
+        // Show slots directly — qual happens AFTER slot selection
         setActiveAktion('slots_anzeigen')
         setActiveSlots(slots)
-
       } else {
         setActiveAktion(aktion)
       }
@@ -391,15 +413,12 @@ export default function ChatWidget() {
     if (e.key === 'Enter') sendMessage()
   }
 
-  // ── Derived ────────────────────────────────────────────────────────────────
-
   const canSend       = !loading && (input.trim().length > 0 || imagePreview !== null)
   const showQualChips = !loading && qualStep >= 4 && qualStep <= 8
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* ── Chat window ─────────────────────────────────────────────────── */}
       {open && (
         <div style={{
           position: 'fixed', bottom: 90, right: 24,
@@ -468,7 +487,7 @@ export default function ChatWidget() {
                   </div>
                 </div>
 
-                {/* Greeting chips — fixed under first message */}
+                {/* Greeting chips */}
                 {msg.id === GREETING_ID && !greetingChipsUsed && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>
                     {QUICK_REPLIES.map(q => <Chip key={q} label={q} onClick={() => sendMessage(q)} />)}
@@ -505,16 +524,28 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {/* slots_anzeigen: time slot chips */}
+            {/* slots_anzeigen: Slot-Chips + "Keiner passt?" Link */}
             {!loading && activeAktion === 'slots_anzeigen' && activeSlots.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
-                {activeSlots.map((slot, i) => (
-                  <Chip
-                    key={i}
-                    label={`🕐 ${slot.label || `${slot.datum} ${slot.uhrzeit}`}`}
-                    onClick={() => handleSlotSelect(slot)}
-                  />
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {activeSlots.map((slot, i) => (
+                    <Chip
+                      key={i}
+                      label={slot.label || `${slot.datum} — ${slot.uhrzeit} Uhr`}
+                      onClick={() => handleSlotSelect(slot)}
+                    />
+                  ))}
+                </div>
+                <a
+                  href="#contact"
+                  onClick={() => setOpen(false)}
+                  style={{
+                    fontSize: 12, color: '#6b7280', textDecoration: 'underline',
+                    cursor: 'pointer', marginTop: 2,
+                  }}
+                >
+                  Keiner der Termine passt? Kontaktformular öffnen
+                </a>
               </div>
             )}
 
@@ -553,7 +584,6 @@ export default function ChatWidget() {
             {imageError && <div style={{ fontSize: 12, color: '#ef4444' }}>{imageError}</div>}
 
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {/* Paperclip */}
               <button type="button" onClick={() => fileInputRef.current?.click()} title="Bild anhängen"
                 style={{
                   background: 'none', border: '1.5px solid #e0e7ef', borderRadius: 10,
@@ -603,7 +633,7 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* ── Floating button + pulse + teaser ─────────────────────────────── */}
+      {/* Floating button + pulse + teaser */}
       <div style={{
         position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
         display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10,
@@ -648,7 +678,6 @@ export default function ChatWidget() {
         </div>
       </div>
 
-      {/* Animations */}
       <style>{`
         @keyframes botDot {
           0%, 60%, 100% { opacity: 0.4; transform: scale(1); }

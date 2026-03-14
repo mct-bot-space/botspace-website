@@ -34,7 +34,7 @@ type QualKey = keyof QualData
 
 const GREETING_ID = 1
 const GREETING_TEXT =
-  '👋 Hallo! Ich bin der Bot Space Assistent.\n\n🤖 Ich beantworte deine Fragen zu KI-Chatbots, unseren Paketen und Preisen — direkt und ohne Wartezeit.\n\nWomit kann ich dir helfen?'
+  '👋 Hallo! Ich bin der BotSpace Assistent.\n\n🤖 Ich beantworte deine Fragen zu KI-Chatbots, unseren Paketen und Preisen — direkt und ohne Wartezeit.\n\nWomit kann ich dir helfen?'
 
 const QUICK_REPLIES = [
   'Was kostet ein Chatbot?',

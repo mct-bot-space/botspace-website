@@ -135,22 +135,34 @@ export default function Hero() {
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 40 }}>
+          <div className="stats-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 40 }}>
             {[
               { value: '24/7', label: 'Verfügbarkeit' },
               { value: '< 2 Sek', label: 'Antwortzeit' },
               { value: '–60%', label: 'Support-Kosten' },
             ].map(stat => (
-              <div key={stat.label}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#1A73E8', lineHeight: 1.1 }}>
+              <div key={stat.label} className="stat-item">
+                <div className="stat-value" style={{ fontSize: 28, fontWeight: 800, color: '#1A73E8', lineHeight: 1.1 }}>
                   {stat.value}
                 </div>
-                <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2, fontWeight: 500 }}>
+                <div className="stat-label" style={{ fontSize: 13, color: '#6b7280', marginTop: 2, fontWeight: 500 }}>
                   {stat.label}
                 </div>
               </div>
             ))}
           </div>
+          <style>{`
+            @media (max-width: 768px) {
+              .stats-row {
+                flex-wrap: nowrap !important;
+                gap: 16px !important;
+                justify-content: flex-start;
+              }
+              .stat-item { flex: 1; min-width: 0; }
+              .stat-value { font-size: 20px !important; }
+              .stat-label { font-size: 11px !important; }
+            }
+          `}</style>
         </div>
       </div>
     </section>

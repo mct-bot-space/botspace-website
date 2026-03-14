@@ -67,6 +67,7 @@ export default function Navbar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <a
               href="#contact"
+              className="hidden-mobile"
               style={{
                 background: '#1A73E8',
                 color: 'white',

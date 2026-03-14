@@ -49,7 +49,7 @@ export default function Hero() {
           }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1A73E8' }} />
             <span style={{ fontSize: 13, fontWeight: 600, color: '#1A73E8', letterSpacing: '0.3px' }}>
-              KI-Chatbots für B2B-Unternehmen
+              KI-Chatbots für Unternehmen
             </span>
           </div>
 

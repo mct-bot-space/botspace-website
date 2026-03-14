@@ -6,6 +6,41 @@ interface Message {
   text: string
 }
 
+const RATE_LIMIT_KEY = 'botspace_chat_log'
+const MAX_MESSAGES = 10
+const WINDOW_MS = 60 * 60 * 1000 // 1 Stunde
+
+function getRateData(): number[] {
+  try {
+    const raw = localStorage.getItem(RATE_LIMIT_KEY)
+    return raw ? (JSON.parse(raw) as number[]) : []
+  } catch {
+    return []
+  }
+}
+
+function isRateLimited(): boolean {
+  const now = Date.now()
+  const timestamps = getRateData().filter(t => now - t < WINDOW_MS)
+  return timestamps.length >= MAX_MESSAGES
+}
+
+function recordMessage(): void {
+  const now = Date.now()
+  const timestamps = getRateData()
+    .filter(t => now - t < WINDOW_MS)
+    .concat(now)
+  localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(timestamps))
+}
+
+function sanitize(raw: string): string {
+  return raw
+    .replace(/</g, '')
+    .replace(/>/g, '')
+    .trim()
+    .slice(0, 500)
+}
+
 export default function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
@@ -17,11 +52,14 @@ export default function ChatWidget() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [rateLimited, setRateLimited] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Prüfe Rate-Limit beim Öffnen des Chats
   useEffect(() => {
     if (open) {
+      setRateLimited(isRateLimited())
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [open])
@@ -31,8 +69,17 @@ export default function ChatWidget() {
   }, [messages, loading])
 
   const sendMessage = async () => {
-    const text = input.trim()
-    if (!text || loading) return
+    const text = sanitize(input)
+    if (!text || loading || rateLimited) return
+
+    // Rate-Limit erneut prüfen direkt vor dem Absenden
+    if (isRateLimited()) {
+      setRateLimited(true)
+      return
+    }
+
+    recordMessage()
+    if (isRateLimited()) setRateLimited(true)
 
     const userMsg: Message = { id: Date.now(), role: 'user', text }
     setMessages(prev => [...prev, userMsg])
@@ -235,58 +282,78 @@ export default function ChatWidget() {
           {/* Input */}
           <div
             style={{
-              padding: '12px 14px',
+              padding: rateLimited ? '10px 14px' : '12px 14px',
               borderTop: '1px solid #eef0f5',
               display: 'flex',
+              flexDirection: 'column',
               gap: 8,
               background: '#fff',
               flexShrink: 0,
             }}
           >
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder="Nachricht schreiben…"
-              disabled={loading}
-              style={{
-                flex: 1,
-                border: '1.5px solid #e0e7ef',
-                borderRadius: 10,
-                padding: '10px 14px',
-                fontSize: 14,
-                outline: 'none',
-                background: loading ? '#f5f5f5' : '#fff',
-                color: '#1a1a2e',
-                transition: 'border-color 0.2s',
-              }}
-              onFocus={e => (e.currentTarget.style.borderColor = '#1A73E8')}
-              onBlur={e => (e.currentTarget.style.borderColor = '#e0e7ef')}
-            />
-            <button
-              onClick={sendMessage}
-              disabled={loading || !input.trim()}
-              style={{
-                background:
-                  loading || !input.trim() ? '#b0c8f5' : '#1A73E8',
-                border: 'none',
-                borderRadius: 10,
-                width: 42,
-                height: 42,
-                cursor: loading || !input.trim() ? 'default' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'background 0.2s',
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-              </svg>
-            </button>
+            {rateLimited ? (
+              <div
+                style={{
+                  background: '#fff4f4',
+                  border: '1px solid #fca5a5',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  fontSize: 13,
+                  color: '#b91c1c',
+                  textAlign: 'center',
+                  lineHeight: 1.4,
+                }}
+              >
+                Du hast das Nachrichtenlimit erreicht. Bitte versuche es in einer Stunde erneut.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKey}
+                  placeholder="Nachricht schreiben…"
+                  disabled={loading}
+                  maxLength={500}
+                  style={{
+                    flex: 1,
+                    border: '1.5px solid #e0e7ef',
+                    borderRadius: 10,
+                    padding: '10px 14px',
+                    fontSize: 14,
+                    outline: 'none',
+                    background: loading ? '#f5f5f5' : '#fff',
+                    color: '#1a1a2e',
+                    transition: 'border-color 0.2s',
+                  }}
+                  onFocus={e => (e.currentTarget.style.borderColor = '#1A73E8')}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#e0e7ef')}
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={loading || !input.trim()}
+                  style={{
+                    background: loading || !input.trim() ? '#b0c8f5' : '#1A73E8',
+                    border: 'none',
+                    borderRadius: 10,
+                    width: 42,
+                    height: 42,
+                    cursor: loading || !input.trim() ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

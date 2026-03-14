@@ -23,21 +23,21 @@ const values = [
 
 const team = [
   {
-    name: 'Max Müller',
-    role: 'CEO & KI-Stratege',
-    initials: 'MM',
+    name: 'Mika Christian Trauth',
+    role: 'Gründer',
+    initials: 'MCT',
     color: '#1A73E8',
   },
   {
-    name: 'Sara Schmidt',
-    role: 'Head of Development',
-    initials: 'SS',
+    name: 'Markus',
+    role: 'KI-Mitarbeiter',
+    initials: 'M',
     color: '#0d47a1',
   },
   {
-    name: 'Tim Wagner',
-    role: 'Customer Success',
-    initials: 'TW',
+    name: 'Claude',
+    role: 'Künstliche Intelligenz',
+    initials: '🤖',
     color: '#1565c0',
   },
 ]
@@ -111,7 +111,7 @@ export default function About() {
             <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
               {[
                 { n: '50+', label: 'Erfolgreiche Projekte' },
-                { n: '3', label: 'Jahre Erfahrung' },
+                { n: '2', label: 'Jahre Erfahrung' },
                 { n: '100%', label: 'Made in Germany' },
               ].map(s => (
                 <div key={s.label}>

@@ -34,23 +34,12 @@ export default function Navbar() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 72 }}>
           {/* Logo */}
-          <a href="#" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <div style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              background: '#1A73E8',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="white"/>
-              </svg>
-            </div>
-            <span style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' }}>
-              Bot<span style={{ color: '#1A73E8' }}>Space</span>
-            </span>
+          <a href="#" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <img
+              src="/Logo-Text.png"
+              alt="Bot-Space Logo"
+              style={{ height: 40, width: 'auto', objectFit: 'contain' }}
+            />
           </a>
 
           {/* Desktop Nav */}

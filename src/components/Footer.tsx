@@ -113,7 +113,7 @@ export default function Footer() {
           gap: 12,
         }}>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>
-            © 2025 Bot Space GmbH. Alle Rechte vorbehalten.
+            © 2026 MCT Commerce – Alle Rechte vorbehalten
           </p>
           <div style={{ display: 'flex', gap: 24 }}>
             {['Datenschutz', 'Impressum', 'AGB'].map(l => (

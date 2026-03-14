@@ -140,7 +140,6 @@ export default function Hero() {
               { value: '24/7', label: 'Verfügbarkeit' },
               { value: '< 2 Sek', label: 'Antwortzeit' },
               { value: '–60%', label: 'Support-Kosten' },
-              { value: '98%', label: 'Kundenzufriedenheit' },
             ].map(stat => (
               <div key={stat.label}>
                 <div style={{ fontSize: 28, fontWeight: 800, color: '#1A73E8', lineHeight: 1.1 }}>

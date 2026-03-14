@@ -139,20 +139,20 @@ export default function Contact() {
             {/* Contact info */}
             <div style={{ marginTop: 48, paddingTop: 40, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <a href="mailto:hallo@bot-space.de" style={{
+                <a href="mailto:info@bot-space.de" style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 15,
                 }}>
-                  <span>✉️</span> hallo@bot-space.de
+                  <span>✉️</span> info@bot-space.de
                 </a>
-                <a href="tel:+4989123456789" style={{
+                <a href="tel:+4917687000474" style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 15,
                 }}>
-                  <span>📞</span> +49 89 123 456 789
+                  <span>📞</span> +49 176 87000474
                 </a>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgba(255,255,255,0.7)', fontSize: 15 }}>
-                  <span>📍</span> München, Deutschland
+                  <span>📍</span> Dudenhofen, Rheinland-Pfalz, Deutschland
                 </div>
               </div>
             </div>

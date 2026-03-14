@@ -38,7 +38,7 @@ export default function Navbar() {
             <img
               src="/Logo-Text.png"
               alt="Bot-Space Logo"
-              style={{ height: 52, width: 'auto', objectFit: 'contain' }}
+              style={{ height: 64, width: 'auto', objectFit: 'contain' }}
             />
           </a>
 

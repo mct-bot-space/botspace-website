@@ -14,23 +14,12 @@ export default function Footer() {
         }}>
           {/* Brand */}
           <div style={{ gridColumn: 'span 1' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <div style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: '#1A73E8',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="white"/>
-                </svg>
-              </div>
-              <span style={{ fontSize: 18, fontWeight: 700, color: 'white' }}>
-                Bot<span style={{ color: '#1A73E8' }}>Space</span>
-              </span>
+            <div style={{ marginBottom: 16 }}>
+              <img
+                src="/Logo-Text-White.png"
+                alt="Bot Space Logo"
+                style={{ height: 48, width: 'auto', objectFit: 'contain' }}
+              />
             </div>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
               KI-Chatbots für den deutschen Mittelstand. Made in Germany.

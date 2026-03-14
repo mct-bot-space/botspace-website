@@ -41,6 +41,8 @@ export default function ChatWidget() {
   const [loading, setLoading] = useState(false)
   const [userHasSent, setUserHasSent] = useState(false)
   const [quickRepliesUsed, setQuickRepliesUsed] = useState(false)
+  const [activeAktion, setActiveAktion] = useState<string | null>(null)
+  const [activeSlots, setActiveSlots] = useState<string[]>([])
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -104,6 +106,8 @@ export default function ChatWidget() {
     setInput('')
     setImagePreview(null)
     setImageError(null)
+    setActiveAktion(null)
+    setActiveSlots([])
     setLoading(true)
 
     try {
@@ -120,7 +124,11 @@ export default function ChatWidget() {
       )
       const data = await res.json()
       const reply = data?.antwort || 'Ich konnte leider keine Antwort erhalten.'
+      const aktion = data?.aktion ?? null
+      const slots: string[] = Array.isArray(data?.slots) ? data.slots : []
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'bot', text: reply }])
+      setActiveAktion(aktion)
+      if (aktion === 'slots_anzeigen') setActiveSlots(slots)
     } catch {
       setMessages(prev => [
         ...prev,
@@ -309,32 +317,68 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {/* Quick Reply Chips */}
-            {showQuickReplies && (
+            {/* Aktions-Chips: slot_auswahl → Montag / Sonntag */}
+            {!loading && activeAktion === 'slot_auswahl' && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
+                {['Montag', 'Sonntag'].map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => { setActiveAktion(null); sendMessage(tag) }}
+                    style={{
+                      background: '#fff', border: '1.5px solid #1A73E8',
+                      borderRadius: 20, padding: '6px 18px',
+                      fontSize: 14, color: '#1A73E8',
+                      cursor: 'pointer', fontWeight: 600,
+                      transition: 'background 0.15s, color 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#1A73E8'; e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1A73E8' }}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Aktions-Chips: slots_anzeigen → Zeitslots */}
+            {!loading && activeAktion === 'slots_anzeigen' && activeSlots.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
+                {activeSlots.map(slot => (
+                  <button
+                    key={slot}
+                    onClick={() => { setActiveAktion(null); setActiveSlots([]); sendMessage(`Ich möchte den Termin um ${slot} Uhr buchen`) }}
+                    style={{
+                      background: '#fff', border: '1.5px solid #1A73E8',
+                      borderRadius: 20, padding: '6px 14px',
+                      fontSize: 13, color: '#1A73E8',
+                      cursor: 'pointer', fontWeight: 500,
+                      transition: 'background 0.15s, color 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#1A73E8'; e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1A73E8' }}
+                  >
+                    🕐 {slot}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Standard Quick Reply Chips (nur wenn keine Aktion aktiv) */}
+            {showQuickReplies && !activeAktion && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
                 {QUICK_REPLIES.map(q => (
                   <button
                     key={q}
                     onClick={() => handleQuickReply(q)}
                     style={{
-                      background: '#fff',
-                      border: '1.5px solid #1A73E8',
-                      borderRadius: 20,
-                      padding: '6px 13px',
-                      fontSize: 13,
-                      color: '#1A73E8',
-                      cursor: 'pointer',
+                      background: '#fff', border: '1.5px solid #1A73E8',
+                      borderRadius: 20, padding: '6px 13px',
+                      fontSize: 13, color: '#1A73E8',
+                      cursor: 'pointer', fontWeight: 500,
                       transition: 'background 0.15s, color 0.15s',
-                      fontWeight: 500,
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.background = '#1A73E8'
-                      e.currentTarget.style.color = '#fff'
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.background = '#fff'
-                      e.currentTarget.style.color = '#1A73E8'
-                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#1A73E8'; e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1A73E8' }}
                   >
                     {q}
                   </button>

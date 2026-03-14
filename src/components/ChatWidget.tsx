@@ -45,17 +45,12 @@ export default function ChatWidget() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, kunde: 'padel-heintz' }),
+          body: JSON.stringify({ nachricht: text, kunde: 'padel-heintz' }),
         }
       )
 
       const data = await res.json()
-      const reply =
-        data?.message ||
-        data?.text ||
-        data?.reply ||
-        data?.output ||
-        'Ich konnte leider keine Antwort erhalten.'
+      const reply = data?.antwort || 'Ich konnte leider keine Antwort erhalten.'
 
       setMessages(prev => [
         ...prev,

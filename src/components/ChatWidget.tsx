@@ -45,6 +45,24 @@ function renderMarkdown(text: string): string {
     .replace(/\n/g, '<br />')
 }
 
+// Fallback buttons when backend doesn't send any (Haiku unreliable)
+const QUALI_FALLBACK: [string, string[]][] = [
+  ['Frage 6/12', ['Arztpraxis/Zahnarzt', 'Handwerk', 'Immobilien', 'Sport/Freizeit', 'E-Commerce', 'Gastronomie', 'Sonstiges']],
+  ['Frage 7/12', ['Telefon', 'E-Mail', 'Persönlich', 'Social Media', 'Gar nicht']],
+  ['Frage 8/12', ['1', '2-5', '6-20', '21-50', '50+']],
+  ['Frage 9/12', ['Unter 50', '50-200', '200-500', '500+']],
+  ['Frage 10/12', ['Kundenservice verbessern', 'Leads generieren', 'Kosten senken', '24/7 Erreichbarkeit']],
+  ['Frage 11/12', ['Zoom-Videocall', 'Telefonat']],
+  ['Frage 12/12', ['E-Mail', 'WhatsApp', 'SMS']],
+]
+
+function getFallbackButtons(botText: string): string[] {
+  for (const [pattern, buttons] of QUALI_FALLBACK) {
+    if (botText.includes(pattern)) return buttons
+  }
+  return []
+}
+
 function getOrCreateSessionId(): string {
   const key = 'botspace_session_id'
   const existing = localStorage.getItem(key)
@@ -123,6 +141,7 @@ export default function ChatWidget() {
   const [activeAktion, setActiveAktion] = useState<string | null>(null)
   const [activeSlots, setActiveSlots] = useState<Slot[]>([])
   const [activeButtons, setActiveButtons] = useState<string[]>([])
+  const [buttonsHint, setButtonsHint] = useState<'quali' | 'termin' | null>(null)
 
   // Qualification state — refs to avoid stale closures in async calls
   const [modus, setModus] = useState<'chat' | 'qualifizierung'>('chat')
@@ -227,6 +246,7 @@ export default function ChatWidget() {
     setActiveAktion(null)
     setActiveSlots([])
     setActiveButtons([])
+    setButtonsHint(null)
 
     try {
       const body: Record<string, unknown> = {
@@ -276,8 +296,13 @@ export default function ChatWidget() {
 
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'bot', text: botText }])
 
-      // Set webhook buttons
-      setActiveButtons(buttons)
+      // Set buttons: backend first, then frontend fallback
+      const resolvedButtons = buttons.length > 0 ? buttons : getFallbackButtons(botText)
+      setActiveButtons(resolvedButtons)
+
+      // Determine hint type for buttons
+      const isQuali = /Frage \d+\/12/.test(botText)
+      setButtonsHint(resolvedButtons.length > 0 && isQuali ? 'quali' : null)
 
       // Handle actions
       if (aktion === 'termin_gebucht' || aktion === 'termin_buchen') {
@@ -287,6 +312,7 @@ export default function ChatWidget() {
       } else if (aktion === 'slots_anzeigen') {
         setActiveAktion('slots_anzeigen')
         setActiveSlots(slots)
+        setButtonsHint('termin')
       }
     } catch (err) {
       const isTimeout = err instanceof DOMException && err.name === 'AbortError'
@@ -359,6 +385,7 @@ export default function ChatWidget() {
     setImg(null)
     setImgErr(null)
     setActiveButtons([])
+    setButtonsHint(null)
 
     await sendToWebhook(text, { img: imgToSend })
   }
@@ -517,25 +544,38 @@ export default function ChatWidget() {
                     />
                   ))}
                 </div>
-                <a
-                  href="#contact"
-                  onClick={() => setOpen(false)}
-                  style={{
-                    fontSize: 12, color: '#6b7280', textDecoration: 'underline',
-                    cursor: 'pointer', marginTop: 2,
-                  }}
-                >
-                  Keiner der Termine passt? Kontaktformular öffnen
-                </a>
+                <div style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 8 }}>
+                  Kein passender Termin?{' '}
+                  <a href="#contact" onClick={() => setOpen(false)}
+                    style={{ color: '#1A73E8', textDecoration: 'underline', cursor: 'pointer' }}>
+                    Kontaktformular
+                  </a>
+                </div>
               </div>
             )}
 
-            {/* Webhook buttons */}
+            {/* Webhook / fallback buttons */}
             {!loading && activeButtons.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
-                {activeButtons.map((btn, i) => (
-                  <Chip key={btn} label={btn} onClick={() => sendMessage(btn)} delay={i * 60} />
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {activeButtons.map((btn, i) => (
+                    <Chip key={btn} label={btn} onClick={() => sendMessage(btn)} delay={i * 60} />
+                  ))}
+                </div>
+                {buttonsHint === 'quali' && (
+                  <div style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 8 }}>
+                    Oder tippe deine Antwort ein
+                  </div>
+                )}
+                {buttonsHint === 'termin' && (
+                  <div style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 8 }}>
+                    Kein passender Termin?{' '}
+                    <a href="#contact" onClick={() => setOpen(false)}
+                      style={{ color: '#1A73E8', textDecoration: 'underline', cursor: 'pointer' }}>
+                      Kontaktformular
+                    </a>
+                  </div>
+                )}
               </div>
             )}
 

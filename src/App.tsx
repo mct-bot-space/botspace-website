@@ -1,9 +1,8 @@
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
-import Problem from './components/Problem'
-import Solutions from './components/Solutions'
+import Benefits from './components/Benefits'
+import DemoChat from './components/DemoChat'
 import Pricing from './components/Pricing'
-import About from './components/About'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
 import ChatWidget from './components/ChatWidget'
@@ -14,10 +13,9 @@ function App() {
       <Navbar />
       <main>
         <Hero />
-        <Problem />
-        <Solutions />
+        <Benefits />
+        <DemoChat />
         <Pricing />
-        <About />
         <Contact />
       </main>
       <Footer />

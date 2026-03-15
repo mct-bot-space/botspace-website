@@ -26,13 +26,18 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Links */}
+          {/* Navigation */}
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 16 }}>
-              Leistungen
+              Navigation
             </div>
-            {['Kundensupport', 'Lead-Qualifizierung', 'Terminvereinbarung', 'Integrationen'].map(l => (
-              <a key={l} href="#solutions" style={{
+            {[
+              { label: 'Vorteile', href: '#benefits' },
+              { label: 'Demo', href: '#demo-chat' },
+              { label: 'Preise', href: '#pricing' },
+              { label: 'Kontakt', href: '#contact' },
+            ].map(l => (
+              <a key={l.label} href={l.href} style={{
                 display: 'block',
                 fontSize: 14,
                 color: 'rgba(255,255,255,0.55)',
@@ -43,16 +48,17 @@ export default function Footer() {
               onMouseEnter={e => (e.currentTarget.style.color = 'white')}
               onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
               >
-                {l}
+                {l.label}
               </a>
             ))}
           </div>
 
+          {/* Pakete */}
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 16 }}>
               Pakete
             </div>
-            {['Starter', 'Pro', 'Enterprise', 'Individuell'].map(l => (
+            {['Starter', 'Pro', 'Enterprise'].map(l => (
               <a key={l} href="#pricing" style={{
                 display: 'block',
                 fontSize: 14,
@@ -69,25 +75,32 @@ export default function Footer() {
             ))}
           </div>
 
+          {/* Kontakt */}
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 16 }}>
-              Unternehmen
+              Kontakt
             </div>
-            {['Über uns', 'Kontakt', 'Datenschutz', 'Impressum'].map(l => (
-              <a key={l} href="#" style={{
-                display: 'block',
-                fontSize: 14,
-                color: 'rgba(255,255,255,0.55)',
-                textDecoration: 'none',
-                marginBottom: 10,
-                transition: 'color 0.2s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'white')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
-              >
-                {l}
-              </a>
-            ))}
+            <a href="mailto:info@bot-space.de" style={{
+              display: 'block', fontSize: 14, color: 'rgba(255,255,255,0.55)',
+              textDecoration: 'none', marginBottom: 10, transition: 'color 0.2s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'white')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
+            >
+              info@bot-space.de
+            </a>
+            <a href="tel:+4917687000474" style={{
+              display: 'block', fontSize: 14, color: 'rgba(255,255,255,0.55)',
+              textDecoration: 'none', marginBottom: 10, transition: 'color 0.2s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'white')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
+            >
+              +49 176 87000474
+            </a>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>
+              Dudenhofen, Deutschland
+            </div>
           </div>
         </div>
 

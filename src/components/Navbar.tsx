@@ -11,9 +11,9 @@ export default function Navbar() {
   }, [])
 
   const navLinks = [
-    { label: 'Leistungen', href: '#solutions' },
+    { label: 'Vorteile', href: '#benefits' },
+    { label: 'Demo', href: '#demo-chat' },
     { label: 'Preise', href: '#pricing' },
-    { label: 'Über uns', href: '#about' },
     { label: 'Kontakt', href: '#contact' },
   ]
 
@@ -66,7 +66,7 @@ export default function Navbar() {
           {/* CTA Button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <a
-              href="#contact"
+              href="#demo-chat"
               className="hidden-mobile"
               style={{
                 background: '#1A73E8',
@@ -82,7 +82,7 @@ export default function Navbar() {
               onMouseEnter={e => (e.currentTarget.style.background = '#1557b0')}
               onMouseLeave={e => (e.currentTarget.style.background = '#1A73E8')}
             >
-              Kostenlos beraten lassen
+              Demo buchen
             </a>
             {/* Mobile menu toggle */}
             <button

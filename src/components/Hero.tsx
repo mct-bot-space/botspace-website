@@ -55,16 +55,16 @@ export default function Hero() {
 
           {/* Headline */}
           <h1 style={{
-            fontSize: 'clamp(36px, 5vw, 62px)',
+            fontSize: 'clamp(32px, 5vw, 58px)',
             fontWeight: 800,
             lineHeight: 1.1,
             color: '#0d1117',
             marginBottom: 24,
             letterSpacing: '-1.5px',
           }}>
-            Automatisieren Sie Ihren{' '}
-            <span style={{ color: '#1A73E8' }}>Kundenservice</span>{' '}
-            mit intelligenten KI-Chatbots
+            40% deiner Leads melden sich{' '}
+            <span style={{ color: '#1A73E8' }}>nie wieder</span>{' '}
+            — weil niemand rangegangen ist.
           </h1>
 
           {/* Subheadline */}
@@ -75,15 +75,13 @@ export default function Hero() {
             marginBottom: 40,
             maxWidth: 580,
           }}>
-            Bot Space entwickelt maßgeschneiderte KI-Chatbots, die Ihre Kundenanfragen
-            rund um die Uhr bearbeiten — und so Kosten senken und die Kundenzufriedenheit
-            messbar steigern.
+            Bot Space gibt deinen Kunden sofort eine Antwort. Rund um die Uhr. Ohne dass du den Finger rührst.
           </p>
 
           {/* CTA Buttons */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', marginBottom: 64 }}>
             <a
-              href="#contact"
+              href="#demo-chat"
               style={{
                 background: '#1A73E8',
                 color: 'white',
@@ -107,7 +105,7 @@ export default function Hero() {
                 e.currentTarget.style.boxShadow = '0 4px 15px rgba(26,115,232,0.35)'
               }}
             >
-              Kostenlose Beratung anfragen
+              Demo buchen
             </a>
             <a
               href="#pricing"
@@ -130,7 +128,7 @@ export default function Hero() {
                 e.currentTarget.style.background = 'white'
               }}
             >
-              Preise ansehen
+              Pakete ansehen
             </a>
           </div>
 
@@ -139,7 +137,7 @@ export default function Hero() {
             {[
               { value: '24/7', label: 'Verfügbarkeit' },
               { value: '< 2 Sek', label: 'Antwortzeit' },
-              { value: '–60%', label: 'Support-Kosten' },
+              { value: '0', label: 'Verpasste Leads' },
             ].map(stat => (
               <div key={stat.label} className="stat-item">
                 <div className="stat-value" style={{ fontSize: 28, fontWeight: 800, color: '#1A73E8', lineHeight: 1.1 }}>

@@ -115,7 +115,11 @@ function Chip({ label, onClick, delay = 0 }: { label: string; onClick: () => voi
 
 // ─── ChatWidget ───────────────────────────────────────────────────────────────
 
-export default function ChatWidget() {
+interface ChatWidgetProps {
+  embedded?: boolean
+}
+
+export default function ChatWidget({ embedded = false }: ChatWidgetProps) {
   const [sessionId] = useState<string>(() => getOrCreateSessionId())
   const [open, setOpen] = useState(false)
   const [showTeaser, setShowTeaser] = useState(false)
@@ -177,18 +181,20 @@ export default function ChatWidget() {
     return () => window.removeEventListener('resize', h)
   }, [])
 
-  // Body overflow lock on mobile
+  // Body overflow lock on mobile (floating only)
   useEffect(() => {
+    if (embedded) return
     if (open && isMobile) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
     }
     return () => { document.body.style.overflow = '' }
-  }, [open, isMobile])
+  }, [open, isMobile, embedded])
 
-  // Open/close animation
+  // Open/close animation (floating only)
   useEffect(() => {
+    if (embedded) return
     if (open) {
       setHasBeenOpened(true)
       setShouldRender(true)
@@ -200,14 +206,15 @@ export default function ChatWidget() {
       const timer = setTimeout(() => setShouldRender(false), 300)
       return () => clearTimeout(timer)
     }
-  }, [open])
+  }, [open, embedded])
 
-  // Teaser
+  // Teaser (floating only)
   useEffect(() => {
+    if (embedded) return
     const t1 = setTimeout(() => setShowTeaser(true), 3000)
     const t2 = setTimeout(() => setShowTeaser(false), 9000)
     return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
+  }, [embedded])
 
   // Scroll to bottom
   useEffect(() => {
@@ -396,282 +403,339 @@ export default function ChatWidget() {
 
   const canSend = !loading && (input.trim().length > 0 || imagePreview !== null)
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-  return createPortal(
-    <>
-      {/* Chat window */}
-      {shouldRender && (
-        <div style={{
-          position: 'fixed',
-          ...(isMobile
-            ? { inset: 0, width: '100%', height: '100%', maxHeight: '100dvh', borderRadius: 0 }
-            : { bottom: 90, right: 24, width: 380, height: 520, borderRadius: 16 }),
-          background: '#fff',
-          boxShadow: isMobile ? 'none' : '0 8px 40px rgba(0,0,0,0.18)',
-          display: 'flex', flexDirection: 'column',
-          zIndex: 10000, overflow: 'hidden', fontFamily: 'inherit',
-          opacity: animateIn ? 1 : 0,
-          transform: animateIn ? 'translateY(0)' : 'translateY(20px)',
-          transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
-        }}>
+  // ── Shared chat panel (used by both embedded and floating) ─────────────────
 
-          {/* Header */}
+  const chatPanel = (
+    <div style={{
+      ...(embedded
+        ? { width: '100%', height: 600, borderRadius: 16 }
+        : {
+            position: 'fixed' as const,
+            ...(isMobile
+              ? { inset: 0, width: '100%', height: '100%', maxHeight: '100dvh', borderRadius: 0 }
+              : { bottom: 90, right: 24, width: 380, height: 520, borderRadius: 16 }),
+            zIndex: 10000,
+            opacity: animateIn ? 1 : 0,
+            transform: animateIn ? 'translateY(0)' : 'translateY(20px)',
+            transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+          }),
+      background: '#fff',
+      boxShadow: embedded ? '0 4px 24px rgba(0,0,0,0.12)' : (isMobile ? 'none' : '0 8px 40px rgba(0,0,0,0.18)'),
+      display: 'flex', flexDirection: 'column' as const,
+      overflow: 'hidden', fontFamily: 'inherit',
+    }}>
+
+      {/* Header */}
+      <div style={{
+        background: '#1A73E8',
+        padding: (!embedded && isMobile) ? 'max(14px, env(safe-area-inset-top)) 18px 14px' : '14px 18px',
+        flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        borderRadius: embedded ? '16px 16px 0 0' : undefined,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            background: '#1A73E8',
-            padding: isMobile ? 'max(14px, env(safe-area-inset-top)) 18px 14px' : '14px 18px',
-            flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            width: 40, height: 40, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden', flexShrink: 0,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: '50%',
-                background: 'rgba(255,255,255,0.15)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden', flexShrink: 0,
-              }}>
-                <img src="/Logo-Main-White.png" alt="Bot Space"
-                  style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
-              </div>
-              <div>
-                <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
-                  Bot Space
-                </div>
-                <div style={{
-                  color: 'rgba(255,255,255,0.85)', fontSize: 12,
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}>
-                  <span style={{
-                    width: 7, height: 7, borderRadius: '50%', background: '#4ade80',
-                    display: 'inline-block', boxShadow: '0 0 4px rgba(74,222,128,0.6)',
-                  }} />
-                  Online
-                </div>
-              </div>
+            <img src="/Logo-Main-White.png" alt="Bot Space"
+              style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+          </div>
+          <div>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
+              Bot Space
             </div>
-            <button type="button" onClick={() => setOpen(false)} style={{
-              background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8,
-              width: 36, height: 36, cursor: 'pointer', color: '#fff', fontSize: 20,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background 0.2s',
-            }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
-            >✕</button>
-          </div>
-
-          {/* Messages */}
-          <div style={{
-            flex: 1, overflowY: 'auto', padding: '16px 14px',
-            display: 'flex', flexDirection: 'column', gap: 10, background: '#f8faff',
-            WebkitOverflowScrolling: 'touch',
-          }}>
-            {messages.map((msg, idx) => (
-              <div key={msg.id} style={{
-                animation: idx > 0 ? 'msgFadeIn 0.25s ease both' : undefined,
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                }}>
-                  <div style={{
-                    maxWidth: '78%',
-                    padding: idx === 0 ? '12px 14px' : '10px 14px',
-                    borderRadius: msg.role === 'user'
-                      ? '18px 18px 4px 18px'
-                      : '18px 18px 18px 4px',
-                    background: msg.role === 'user' ? '#1A73E8' : '#fff',
-                    color: msg.role === 'user' ? '#fff' : '#1a1a2e',
-                    fontSize: 14, lineHeight: 1.55,
-                    boxShadow: msg.role === 'bot' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                    wordBreak: 'break-word',
-                    borderTop: idx === 0 ? '3px solid #1A73E8' : undefined,
-                  }}>
-                    {msg.image && (
-                      <img src={msg.image} alt="Anhang" style={{
-                        width: '100%', maxWidth: 200, borderRadius: 8,
-                        marginBottom: 6, display: 'block',
-                      }} />
-                    )}
-                    {msg.role === 'bot'
-                      ? <span dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }} />
-                      : msg.text}
-                  </div>
-                </div>
-
-                {/* Greeting chips */}
-                {msg.id === GREETING_ID && !greetingChipsUsed && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>
-                    {QUICK_REPLIES.map((q, i) => (
-                      <Chip key={q} label={q} onClick={() => sendMessage(q)} delay={i * 60} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Loading dots */}
-            {loading && (
-              <div style={{
-                display: 'flex', justifyContent: 'flex-start',
-                animation: 'msgFadeIn 0.2s ease both',
-              }}>
-                <div style={{
-                  padding: '12px 16px', borderRadius: '18px 18px 18px 4px',
-                  background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                  display: 'flex', gap: 5, alignItems: 'center',
-                }}>
-                  {[0, 1, 2].map(i => (
-                    <span key={i} style={{
-                      width: 8, height: 8, borderRadius: '50%', background: '#1A73E8',
-                      display: 'inline-block', animation: 'botDot 1.2s infinite',
-                      animationDelay: `${i * 0.2}s`, opacity: 0.4,
-                    }} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* slots_anzeigen */}
-            {!loading && activeAktion === 'slots_anzeigen' && activeSlots.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {activeSlots.map((slot, i) => (
-                    <Chip
-                      key={i}
-                      label={slot.label || `${slot.datum} — ${slot.uhrzeit} Uhr`}
-                      onClick={() => handleSlotSelect(slot)}
-                      delay={i * 60}
-                    />
-                  ))}
-                </div>
-                <div style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 8 }}>
-                  Kein passender Termin?{' '}
-                  <a href="#contact" onClick={() => setOpen(false)}
-                    style={{ color: '#1A73E8', textDecoration: 'underline', cursor: 'pointer' }}>
-                    Kontaktformular
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {/* Webhook / fallback buttons */}
-            {!loading && activeButtons.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {activeButtons.map((btn, i) => (
-                    <Chip key={btn} label={btn} onClick={() => sendMessage(btn)} delay={i * 60} />
-                  ))}
-                </div>
-                {buttonsHint === 'quali' && (
-                  <div style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 8 }}>
-                    Oder tippe deine Antwort ein
-                  </div>
-                )}
-                {buttonsHint === 'termin' && (
-                  <div style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 8 }}>
-                    Kein passender Termin?{' '}
-                    <a href="#contact" onClick={() => setOpen(false)}
-                      style={{ color: '#1A73E8', textDecoration: 'underline', cursor: 'pointer' }}>
-                      Kontaktformular
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div ref={bottomRef} />
-          </div>
-
-          {/* Input area */}
-          <div style={{
-            padding: isMobile
-              ? '10px 14px max(12px, env(safe-area-inset-bottom))'
-              : '10px 14px 12px',
-            borderTop: '1px solid #eef0f5',
-            display: 'flex', flexDirection: 'column', gap: 8,
-            background: '#fff', flexShrink: 0,
-          }}>
-            {imagePreview && (
-              <div style={{ position: 'relative', width: 60 }}>
-                <img src={imagePreview} alt="Vorschau" style={{
-                  width: 60, height: 60, objectFit: 'cover', borderRadius: 8,
-                  display: 'block', border: '1.5px solid #e0e7ef',
-                }} />
-                <button type="button" onClick={() => { setImg(null); setImgErr(null) }} style={{
-                  position: 'absolute', top: -6, right: -6, width: 18, height: 18,
-                  borderRadius: '50%', background: '#ef4444', border: 'none',
-                  color: '#fff', fontSize: 11, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>✕</button>
-              </div>
-            )}
-            {imageError && (
-              <div style={{ fontSize: 12, color: '#ef4444' }}>{imageError}</div>
-            )}
-
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button type="button" onClick={() => fileInputRef.current?.click()}
-                title="Bild anhängen"
-                style={{
-                  background: 'none', border: '1.5px solid #e0e7ef', borderRadius: 10,
-                  width: 40, height: 40, cursor: 'pointer', flexShrink: 0, color: '#6b7280',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'border-color 0.2s, color 0.2s',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = '#1A73E8'
-                  e.currentTarget.style.color = '#1A73E8'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = '#e0e7ef'
-                  e.currentTarget.style.color = '#6b7280'
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                  strokeLinejoin="round">
-                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66L9.41 17.41a2 2 0 01-2.83-2.83l8.49-8.48" />
-                </svg>
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/png,image/jpeg"
-                style={{ display: 'none' }} onChange={handleFileChange} />
-
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKey}
-                placeholder={modus === 'qualifizierung' ? 'Deine Antwort…' : 'Nachricht schreiben…'}
-                disabled={loading}
-                maxLength={500}
-                style={{
-                  flex: 1, border: '1.5px solid #e0e7ef', borderRadius: 10,
-                  padding: '10px 14px', fontSize: 16, outline: 'none',
-                  background: loading ? '#f5f5f5' : '#fff',
-                  color: '#1a1a2e', transition: 'border-color 0.2s',
-                }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#1A73E8')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e0e7ef')}
-              />
-
-              <button type="button" onClick={() => sendMessage()} disabled={!canSend}
-                style={{
-                  background: canSend ? '#1A73E8' : '#b0c8f5',
-                  border: 'none', borderRadius: 10, width: 42, height: 42,
-                  cursor: canSend ? 'pointer' : 'default', flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'background 0.2s',
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                </svg>
-              </button>
+            <div style={{
+              color: 'rgba(255,255,255,0.85)', fontSize: 12,
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%', background: '#4ade80',
+                display: 'inline-block', boxShadow: '0 0 4px rgba(74,222,128,0.6)',
+              }} />
+              Online
             </div>
           </div>
         </div>
-      )}
+        {!embedded && (
+          <button type="button" onClick={() => setOpen(false)} style={{
+            background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8,
+            width: 36, height: 36, cursor: 'pointer', color: '#fff', fontSize: 20,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.2s',
+          }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+          >✕</button>
+        )}
+      </div>
+
+      {/* Messages */}
+      <div style={{
+        flex: 1, overflowY: 'auto', padding: '16px 14px',
+        display: 'flex', flexDirection: 'column', gap: 10, background: '#f8faff',
+        WebkitOverflowScrolling: 'touch',
+      }}>
+        {messages.map((msg, idx) => (
+          <div key={msg.id} style={{
+            animation: idx > 0 ? 'msgFadeIn 0.25s ease both' : undefined,
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+            }}>
+              <div style={{
+                maxWidth: '78%',
+                padding: idx === 0 ? '12px 14px' : '10px 14px',
+                borderRadius: msg.role === 'user'
+                  ? '18px 18px 4px 18px'
+                  : '18px 18px 18px 4px',
+                background: msg.role === 'user' ? '#1A73E8' : '#fff',
+                color: msg.role === 'user' ? '#fff' : '#1a1a2e',
+                fontSize: 14, lineHeight: 1.55,
+                boxShadow: msg.role === 'bot' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                wordBreak: 'break-word',
+                borderTop: idx === 0 ? '3px solid #1A73E8' : undefined,
+              }}>
+                {msg.image && (
+                  <img src={msg.image} alt="Anhang" style={{
+                    width: '100%', maxWidth: 200, borderRadius: 8,
+                    marginBottom: 6, display: 'block',
+                  }} />
+                )}
+                {msg.role === 'bot'
+                  ? <span dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }} />
+                  : msg.text}
+              </div>
+            </div>
+
+            {/* Greeting chips */}
+            {msg.id === GREETING_ID && !greetingChipsUsed && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>
+                {QUICK_REPLIES.map((q, i) => (
+                  <Chip key={q} label={q} onClick={() => sendMessage(q)} delay={i * 60} />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Loading dots */}
+        {loading && (
+          <div style={{
+            display: 'flex', justifyContent: 'flex-start',
+            animation: 'msgFadeIn 0.2s ease both',
+          }}>
+            <div style={{
+              padding: '12px 16px', borderRadius: '18px 18px 18px 4px',
+              background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+              display: 'flex', gap: 5, alignItems: 'center',
+            }}>
+              {[0, 1, 2].map(i => (
+                <span key={i} style={{
+                  width: 8, height: 8, borderRadius: '50%', background: '#1A73E8',
+                  display: 'inline-block', animation: 'botDot 1.2s infinite',
+                  animationDelay: `${i * 0.2}s`, opacity: 0.4,
+                }} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* slots_anzeigen */}
+        {!loading && activeAktion === 'slots_anzeigen' && activeSlots.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {activeSlots.map((slot, i) => (
+                <Chip
+                  key={i}
+                  label={slot.label || `${slot.datum} — ${slot.uhrzeit} Uhr`}
+                  onClick={() => handleSlotSelect(slot)}
+                  delay={i * 60}
+                />
+              ))}
+            </div>
+            <div style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 8 }}>
+              Kein passender Termin?{' '}
+              <a href="#contact" onClick={() => !embedded && setOpen(false)}
+                style={{ color: '#1A73E8', textDecoration: 'underline', cursor: 'pointer' }}>
+                Kontaktformular
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Webhook / fallback buttons */}
+        {!loading && activeButtons.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {activeButtons.map((btn, i) => (
+                <Chip key={btn} label={btn} onClick={() => sendMessage(btn)} delay={i * 60} />
+              ))}
+            </div>
+            {buttonsHint === 'quali' && (
+              <div style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 8 }}>
+                Oder tippe deine Antwort ein
+              </div>
+            )}
+            {buttonsHint === 'termin' && (
+              <div style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 4, marginBottom: 8 }}>
+                Kein passender Termin?{' '}
+                <a href="#contact" onClick={() => !embedded && setOpen(false)}
+                  style={{ color: '#1A73E8', textDecoration: 'underline', cursor: 'pointer' }}>
+                  Kontaktformular
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input area */}
+      <div style={{
+        padding: (!embedded && isMobile)
+          ? '10px 14px max(12px, env(safe-area-inset-bottom))'
+          : '10px 14px 12px',
+        borderTop: '1px solid #eef0f5',
+        display: 'flex', flexDirection: 'column', gap: 8,
+        background: '#fff', flexShrink: 0,
+      }}>
+        {imagePreview && (
+          <div style={{ position: 'relative', width: 60 }}>
+            <img src={imagePreview} alt="Vorschau" style={{
+              width: 60, height: 60, objectFit: 'cover', borderRadius: 8,
+              display: 'block', border: '1.5px solid #e0e7ef',
+            }} />
+            <button type="button" onClick={() => { setImg(null); setImgErr(null) }} style={{
+              position: 'absolute', top: -6, right: -6, width: 18, height: 18,
+              borderRadius: '50%', background: '#ef4444', border: 'none',
+              color: '#fff', fontSize: 11, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>✕</button>
+          </div>
+        )}
+        {imageError && (
+          <div style={{ fontSize: 12, color: '#ef4444' }}>{imageError}</div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button type="button" onClick={() => fileInputRef.current?.click()}
+            title="Bild anhängen"
+            style={{
+              background: 'none', border: '1.5px solid #e0e7ef', borderRadius: 10,
+              width: 40, height: 40, cursor: 'pointer', flexShrink: 0, color: '#6b7280',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'border-color 0.2s, color 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = '#1A73E8'
+              e.currentTarget.style.color = '#1A73E8'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = '#e0e7ef'
+              e.currentTarget.style.color = '#6b7280'
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+              strokeLinejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66L9.41 17.41a2 2 0 01-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/png,image/jpeg"
+            style={{ display: 'none' }} onChange={handleFileChange} />
+
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder={modus === 'qualifizierung' ? 'Deine Antwort…' : 'Nachricht schreiben…'}
+            disabled={loading}
+            maxLength={500}
+            style={{
+              flex: 1, border: '1.5px solid #e0e7ef', borderRadius: 10,
+              padding: '10px 14px', fontSize: 16, outline: 'none',
+              background: loading ? '#f5f5f5' : '#fff',
+              color: '#1a1a2e', transition: 'border-color 0.2s',
+            }}
+            onFocus={e => (e.currentTarget.style.borderColor = '#1A73E8')}
+            onBlur={e => (e.currentTarget.style.borderColor = '#e0e7ef')}
+          />
+
+          <button type="button" onClick={() => sendMessage()} disabled={!canSend}
+            style={{
+              background: canSend ? '#1A73E8' : '#b0c8f5',
+              border: 'none', borderRadius: 10, width: 42, height: 42,
+              cursor: canSend ? 'pointer' : 'default', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.2s',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
+  const animations = (
+    <style>{`
+      @keyframes botDot {
+        0%, 60%, 100% { opacity: 0.4; transform: scale(1); }
+        30%            { opacity: 1;   transform: scale(1.3); }
+      }
+      @keyframes pulseRing {
+        0%   { transform: scale(1);   opacity: 0.7; }
+        100% { transform: scale(1.9); opacity: 0; }
+      }
+      @keyframes subtlePulse {
+        0%, 80%, 100% { transform: scale(1);   opacity: 0; }
+        90%           { transform: scale(1.5); opacity: 0.3; }
+      }
+      @keyframes teaserIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes msgFadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes chipFadeIn {
+        from { opacity: 0; transform: translateY(6px) scale(0.95); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    `}</style>
+  )
+
+  // ── Embedded mode: render inline ──────────────────────────────────────────
+  if (embedded) {
+    return (
+      <>
+        {chatPanel}
+        {animations}
+      </>
+    )
+  }
+
+  // ── Floating mode: render via portal ──────────────────────────────────────
+  return createPortal(
+    <>
+      {shouldRender && chatPanel}
 
       {/* Floating button + pulse + teaser */}
       <div style={{
@@ -695,7 +759,6 @@ export default function ChatWidget() {
         )}
 
         <div style={{ position: 'relative', width: 58, height: 58 }}>
-          {/* Strong pulse before first open */}
           {!open && !hasBeenOpened && (
             <>
               <span style={{
@@ -710,7 +773,6 @@ export default function ChatWidget() {
               }} />
             </>
           )}
-          {/* Subtle pulse every 5s after first open */}
           {!open && hasBeenOpened && (
             <span style={{
               position: 'absolute', inset: 0, borderRadius: '50%',
@@ -743,39 +805,7 @@ export default function ChatWidget() {
         </div>
       </div>
 
-      <style>{`
-        @keyframes botDot {
-          0%, 60%, 100% { opacity: 0.4; transform: scale(1); }
-          30%            { opacity: 1;   transform: scale(1.3); }
-        }
-        @keyframes pulseRing {
-          0%   { transform: scale(1);   opacity: 0.7; }
-          100% { transform: scale(1.9); opacity: 0; }
-        }
-        @keyframes subtlePulse {
-          0%, 80%, 100% { transform: scale(1);   opacity: 0; }
-          90%           { transform: scale(1.5); opacity: 0.3; }
-        }
-        @keyframes teaserIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes msgFadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes chipFadeIn {
-          from { opacity: 0; transform: translateY(6px) scale(0.95); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          *, *::before, *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-          }
-        }
-      `}</style>
+      {animations}
     </>,
     document.body,
   )

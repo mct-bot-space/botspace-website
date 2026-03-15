@@ -5,64 +5,59 @@ const plans = [
     name: 'STARTER',
     price: '990',
     monthly: '149',
-    tagline: 'Ideal für kleine Unternehmen',
+    duration: '3 Monate',
+    tagline: 'Für kleine Dienstleister & Handwerker',
     color: '#1A73E8',
     highlight: false,
     features: [
-      'KI-Chatbot für 1 Kanal (Website)',
-      'Bis zu 500 Gespräche/Monat',
-      'FAQ-Automatisierung',
-      'E-Mail-Benachrichtigungen',
-      'Basis-Analytics Dashboard',
-      'Onboarding & Einrichtung',
+      'FAQ-Bot bis 50 Antworten',
+      'Branding-Anpassung',
       'E-Mail-Support',
+      'Monatlicher Report',
     ],
     notIncluded: [
+      'Terminbuchung im Chat',
+      'Lead-Qualifizierung',
       'CRM-Integration',
-      'Mehrere Kanäle',
-      'Dedizierter Account Manager',
     ],
   },
   {
     name: 'PRO',
     price: '1.990',
     monthly: '299',
-    tagline: 'Für wachsende Unternehmen',
+    duration: '6 Monate',
+    tagline: 'Für Arztpraxen, Immobilienmakler, Dienstleister',
     color: '#1A73E8',
     highlight: true,
     features: [
-      'KI-Chatbot für 3 Kanäle',
-      'Bis zu 2.000 Gespräche/Monat',
-      'Erweiterte KI-Logik & NLP',
-      'CRM-Integration (HubSpot, Salesforce)',
-      'Lead-Qualifizierung & Routing',
-      'Terminbuchung-Integration',
-      'Erweitertes Analytics & Reporting',
-      'Prioritäts-Support (Chat & E-Mail)',
-      'Monatliche Optimierungs-Session',
+      'Terminbuchung im Chat',
+      'Lead-Qualifizierung',
+      'WhatsApp optional',
+      'Erweitertes FAQ-System',
+      'Prioritäts-Support',
+      'Wöchentlicher Report',
     ],
     notIncluded: [
-      'Dedizierter Account Manager',
+      'CRM-Integration',
+      'Multi-Channel',
     ],
   },
   {
     name: 'ENTERPRISE',
     price: '3.990',
     monthly: '599',
-    tagline: 'Für große Organisationen',
+    duration: '12 Monate',
+    tagline: 'Für E-Commerce & Multi-Standort',
     color: '#1A73E8',
     highlight: false,
     features: [
-      'KI-Chatbot für unbegrenzte Kanäle',
-      'Unbegrenzte Gespräche',
-      'Custom KI-Modell & Training',
-      'Alle Integrationen inklusive',
-      'White-Label Option',
-      'Multi-Sprachen-Support',
+      'CRM-Integration & Multi-Channel',
+      '5.000 Gespräche/Monat',
+      'Wöchentliche Optimierung',
+      '4h-Reaktionszeit',
+      'Custom KI-Training',
       'Dedizierter Account Manager',
-      'SLA-Garantie (99,9% Uptime)',
-      '24/7 Premium-Support',
-      'Quartalsweise Strategie-Reviews',
+      'Alle Pro-Features inklusive',
     ],
     notIncluded: [],
   },
@@ -159,7 +154,6 @@ export default function Pricing() {
                 position: 'relative',
               }}
             >
-              {/* Popular badge */}
               {plan.highlight && (
                 <div style={{
                   position: 'absolute',
@@ -179,7 +173,6 @@ export default function Pricing() {
                 </div>
               )}
 
-              {/* Plan header */}
               <div style={{ marginBottom: 28 }}>
                 <div style={{
                   fontSize: 12,
@@ -198,7 +191,6 @@ export default function Pricing() {
                   {plan.tagline}
                 </div>
 
-                {/* Setup price */}
                 <div style={{ marginBottom: 8 }}>
                   <span style={{
                     fontSize: 48,
@@ -218,7 +210,6 @@ export default function Pricing() {
                   </span>
                 </div>
 
-                {/* Monthly price */}
                 <div style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -238,19 +229,17 @@ export default function Pricing() {
                     fontSize: 13,
                     color: plan.highlight ? 'rgba(255,255,255,0.65)' : '#6b7280',
                   }}>
-                    /Monat
+                    /Monat ({plan.duration})
                   </span>
                 </div>
               </div>
 
-              {/* Divider */}
               <div style={{
                 height: 1,
                 background: plan.highlight ? 'rgba(255,255,255,0.2)' : '#f0f0f0',
                 marginBottom: 24,
               }} />
 
-              {/* Features */}
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {plan.features.map(feat => (
                   <li key={feat} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
@@ -302,9 +291,8 @@ export default function Pricing() {
                 ))}
               </ul>
 
-              {/* CTA */}
               <a
-                href="#contact"
+                href="#demo-chat"
                 style={{
                   display: 'block',
                   textAlign: 'center',
@@ -333,13 +321,12 @@ export default function Pricing() {
                   }
                 }}
               >
-                Jetzt starten
+                Demo buchen
               </a>
             </div>
           ))}
         </div>
 
-        {/* Bottom note */}
         <p style={{
           textAlign: 'center',
           marginTop: 40,
@@ -347,8 +334,8 @@ export default function Pricing() {
           color: '#9ca3af',
         }}>
           Nicht sicher, welches Paket passt?{' '}
-          <a href="#contact" style={{ color: '#1A73E8', textDecoration: 'none', fontWeight: 600 }}>
-            Sprechen Sie mit uns — kostenlos & unverbindlich.
+          <a href="#demo-chat" style={{ color: '#1A73E8', textDecoration: 'none', fontWeight: 600 }}>
+            Frag den Bot — kostenlos & unverbindlich.
           </a>
         </p>
       </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const CONTACT_WEBHOOK = 'https://mctecommerce.app.n8n.cloud/webhook/bot-space-contact'
+const CONTACT_WEBHOOK = 'https://mctecommerce.app.n8n.cloud/webhook/bot-space-kontakt'
 
 export default function Contact() {
   const [form, setForm] = useState({
@@ -29,22 +29,23 @@ export default function Contact() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
-          timestamp: new Date().toISOString(),
-          source: 'bot-space-website',
+          name: form.name,
+          unternehmen: form.company,
+          email: form.email,
+          telefon: form.phone,
+          anliegen: form.anliegen,
+          nachricht: form.message,
         }),
       })
 
-      if (!res.ok) throw new Error('Server error')
-      setSubmitted(true)
+      const data = await res.json()
+      if (data?.status === 'ok') {
+        setSubmitted(true)
+      } else {
+        setError('Etwas ist schiefgelaufen. Bitte versuche es erneut oder schreib uns an info@bot-space.de.')
+      }
     } catch {
-      // Fallback: open mailto
-      const subject = encodeURIComponent(`[Bot Space] ${form.anliegen || 'Kontaktanfrage'} von ${form.name}`)
-      const body = encodeURIComponent(
-        `Name: ${form.name}\nUnternehmen: ${form.company}\nE-Mail: ${form.email}\nTelefon: ${form.phone || '-'}\nAnliegen: ${form.anliegen}\n\nNachricht:\n${form.message}`
-      )
-      window.location.href = `mailto:info@bot-space.de?subject=${subject}&body=${body}`
-      setSubmitted(true)
+      setError('Verbindungsfehler. Bitte versuche es erneut oder schreib uns an info@bot-space.de.')
     } finally {
       setSending(false)
     }
@@ -194,10 +195,10 @@ export default function Contact() {
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
                 <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
                 <h3 style={{ fontSize: 24, fontWeight: 800, color: '#0d1117', marginBottom: 12 }}>
-                  Nachricht gesendet!
+                  Danke!
                 </h3>
                 <p style={{ color: '#6b7280', fontSize: 16, lineHeight: 1.6 }}>
-                  Wir melden uns innerhalb von 24 Stunden bei dir.
+                  Wir melden uns innerhalb von 24 Stunden.
                 </p>
               </div>
             ) : (
@@ -287,9 +288,10 @@ export default function Contact() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>Nachricht</label>
+                    <label style={labelStyle}>Nachricht *</label>
                     <textarea
                       name="message"
+                      required
                       value={form.message}
                       onChange={handleChange}
                       placeholder="Wie können wir dir helfen?"

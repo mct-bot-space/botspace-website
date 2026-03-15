@@ -282,8 +282,6 @@ export default function ChatWidget() {
         localStorage.setItem('botspace_bookings_count', '1')
         updateModus('chat')
         updateSlot(null)
-      } else if (aktion === 'slot_auswahl') {
-        setActiveAktion('slot_auswahl')
       } else if (aktion === 'slots_anzeigen') {
         setActiveAktion('slots_anzeigen')
         setActiveSlots(slots)
@@ -501,15 +499,6 @@ export default function ChatWidget() {
                     }} />
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* slot_auswahl: Montag / Sonntag */}
-            {!loading && activeAktion === 'slot_auswahl' && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
-                {[{ label: '📅 Montag', value: 'Montag' }, { label: '📅 Sonntag', value: 'Sonntag' }].map((tag, i) => (
-                  <Chip key={tag.value} label={tag.label} onClick={() => sendMessage(tag.value)} delay={i * 60} />
-                ))}
               </div>
             )}
 

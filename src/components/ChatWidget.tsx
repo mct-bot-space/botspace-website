@@ -257,7 +257,9 @@ export default function ChatWidget() {
       })
       clearTimeout(timeoutId)
 
-      const data = await res.json()
+      const raw = await res.arrayBuffer()
+      const decoded = new TextDecoder('utf-8').decode(raw)
+      const data = JSON.parse(decoded)
       const reply: string = data?.antwort || ''
       const aktion: string = data?.aktion || 'none'
       const slots: Slot[] = Array.isArray(data?.slots) ? data.slots : []

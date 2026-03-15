@@ -39,28 +39,10 @@ function sanitize(raw: string): string {
 
 function renderMarkdown(text: string): string {
   return text
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#1A73E8;text-decoration:underline;cursor:pointer">$1</a>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/\n/g, '<br />')
-}
-
-function getQuickReplies(botMessage: string): string[] | null {
-  const msg = botMessage.toLowerCase()
-  if (msg.includes('branche'))
-    return ['E-Commerce', 'Gastronomie', 'Handwerk', 'Arztpraxis', 'Fitness', 'Immobilien', 'Sonstiges']
-  if (msg.includes('kundenanfragen beantwortet') || msg.includes('aktuell kundenanfragen'))
-    return ['Telefon', 'E-Mail', 'Kontaktformular', 'Live-Chat', 'Gar nicht']
-  if (msg.includes('mitarbeiter'))
-    return ['1', '2-5', '6-20', '21-50', '50+']
-  if (msg.includes('anfragen') && msg.includes('monat'))
-    return ['Unter 50', '50-100', '100-500', '500-1000', '1000+']
-  if (msg.includes('hauptziel'))
-    return ['Leads generieren', 'FAQ automatisieren', '24/7 erreichbar', 'Zeitersparnis', 'Kundenzufriedenheit']
-  if (msg.includes('zoom') && msg.includes('telefonat'))
-    return ['📹 Zoom-Videocall', '📞 Telefonat']
-  if (msg.includes('zoom-link') || msg.includes('link per'))
-    return ['📧 E-Mail', '💬 WhatsApp', '📱 SMS']
-  return null
 }
 
 function getOrCreateSessionId(): string {
@@ -140,7 +122,6 @@ export default function ChatWidget() {
 
   const [activeAktion, setActiveAktion] = useState<string | null>(null)
   const [activeSlots, setActiveSlots] = useState<Slot[]>([])
-  const [qualChips, setQualChips] = useState<string[] | null>(null)
   const [activeButtons, setActiveButtons] = useState<string[]>([])
 
   // Qualification state — refs to avoid stale closures in async calls
@@ -293,15 +274,8 @@ export default function ChatWidget() {
 
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'bot', text: botText }])
 
-      // Webhook buttons take priority over keyword-detected chips
-      if (buttons.length > 0) {
-        setActiveButtons(buttons)
-        setQualChips(null)
-      } else {
-        setActiveButtons([])
-        const detectedChips = getQuickReplies(botText)
-        setQualChips(detectedChips)
-      }
+      // Set webhook buttons
+      setActiveButtons(buttons)
 
       // Handle actions
       if (aktion === 'termin_gebucht' || aktion === 'termin_buchen') {
@@ -384,7 +358,6 @@ export default function ChatWidget() {
     setInput('')
     setImg(null)
     setImgErr(null)
-    setQualChips(null)
     setActiveButtons([])
 
     await sendToWebhook(text, { img: imgToSend })
@@ -571,15 +544,6 @@ export default function ChatWidget() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
                 {activeButtons.map((btn, i) => (
                   <Chip key={btn} label={btn} onClick={() => sendMessage(btn)} delay={i * 60} />
-                ))}
-              </div>
-            )}
-
-            {/* Qualification quick reply chips */}
-            {!loading && activeButtons.length === 0 && qualChips && qualChips.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
-                {qualChips.map((chip, i) => (
-                  <Chip key={chip} label={chip} onClick={() => sendMessage(chip)} delay={i * 50} />
                 ))}
               </div>
             )}

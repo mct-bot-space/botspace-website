@@ -141,6 +141,7 @@ export default function ChatWidget() {
   const [activeAktion, setActiveAktion] = useState<string | null>(null)
   const [activeSlots, setActiveSlots] = useState<Slot[]>([])
   const [qualChips, setQualChips] = useState<string[] | null>(null)
+  const [activeButtons, setActiveButtons] = useState<string[]>([])
 
   // Qualification state — refs to avoid stale closures in async calls
   const [modus, setModus] = useState<'chat' | 'qualifizierung'>('chat')
@@ -244,6 +245,7 @@ export default function ChatWidget() {
     setLoading(true)
     setActiveAktion(null)
     setActiveSlots([])
+    setActiveButtons([])
 
     try {
       const body: Record<string, unknown> = {
@@ -278,6 +280,7 @@ export default function ChatWidget() {
       const reply: string = data?.antwort || ''
       const aktion: string = data?.aktion || 'none'
       const slots: Slot[] = Array.isArray(data?.slots) ? data.slots : []
+      const buttons: string[] = Array.isArray(data?.buttons) ? data.buttons.filter((b: unknown) => typeof b === 'string' && b.trim()) : []
 
       // Determine bot message
       let botText = reply
@@ -290,9 +293,15 @@ export default function ChatWidget() {
 
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'bot', text: botText }])
 
-      // Detect qualification quick replies from bot message
-      const detectedChips = getQuickReplies(botText)
-      setQualChips(detectedChips)
+      // Webhook buttons take priority over keyword-detected chips
+      if (buttons.length > 0) {
+        setActiveButtons(buttons)
+        setQualChips(null)
+      } else {
+        setActiveButtons([])
+        const detectedChips = getQuickReplies(botText)
+        setQualChips(detectedChips)
+      }
 
       // Handle actions
       if (aktion === 'termin_gebucht' || aktion === 'termin_buchen') {
@@ -376,6 +385,7 @@ export default function ChatWidget() {
     setImg(null)
     setImgErr(null)
     setQualChips(null)
+    setActiveButtons([])
 
     await sendToWebhook(text, { img: imgToSend })
   }
@@ -556,8 +566,17 @@ export default function ChatWidget() {
               </div>
             )}
 
+            {/* Webhook buttons */}
+            {!loading && activeButtons.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
+                {activeButtons.map((btn, i) => (
+                  <Chip key={btn} label={btn} onClick={() => sendMessage(btn)} delay={i * 60} />
+                ))}
+              </div>
+            )}
+
             {/* Qualification quick reply chips */}
-            {!loading && qualChips && qualChips.length > 0 && (
+            {!loading && activeButtons.length === 0 && qualChips && qualChips.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
                 {qualChips.map((chip, i) => (
                   <Chip key={chip} label={chip} onClick={() => sendMessage(chip)} delay={i * 50} />

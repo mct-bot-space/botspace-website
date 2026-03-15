@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,25 @@ function renderMarkdown(text: string): string {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/\n/g, '<br />')
+}
+
+function getQuickReplies(botMessage: string): string[] | null {
+  const msg = botMessage.toLowerCase()
+  if (msg.includes('branche'))
+    return ['E-Commerce', 'Gastronomie', 'Handwerk', 'Arztpraxis', 'Fitness', 'Immobilien', 'Sonstiges']
+  if (msg.includes('kundenanfragen beantwortet') || msg.includes('aktuell kundenanfragen'))
+    return ['Telefon', 'E-Mail', 'Kontaktformular', 'Live-Chat', 'Gar nicht']
+  if (msg.includes('mitarbeiter'))
+    return ['1', '2-5', '6-20', '21-50', '50+']
+  if (msg.includes('anfragen') && msg.includes('monat'))
+    return ['Unter 50', '50-100', '100-500', '500-1000', '1000+']
+  if (msg.includes('hauptziel'))
+    return ['Leads generieren', 'FAQ automatisieren', '24/7 erreichbar', 'Zeitersparnis', 'Kundenzufriedenheit']
+  if (msg.includes('zoom') && msg.includes('telefonat'))
+    return ['📹 Zoom-Videocall', '📞 Telefonat']
+  if (msg.includes('zoom-link') || msg.includes('link per'))
+    return ['📧 E-Mail', '💬 WhatsApp', '📱 SMS']
+  return null
 }
 
 function getOrCreateSessionId(): string {
@@ -120,6 +140,7 @@ export default function ChatWidget() {
 
   const [activeAktion, setActiveAktion] = useState<string | null>(null)
   const [activeSlots, setActiveSlots] = useState<Slot[]>([])
+  const [qualChips, setQualChips] = useState<string[] | null>(null)
 
   // Qualification state — refs to avoid stale closures in async calls
   const [modus, setModus] = useState<'chat' | 'qualifizierung'>('chat')
@@ -269,6 +290,10 @@ export default function ChatWidget() {
 
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'bot', text: botText }])
 
+      // Detect qualification quick replies from bot message
+      const detectedChips = getQuickReplies(botText)
+      setQualChips(detectedChips)
+
       // Handle actions
       if (aktion === 'termin_gebucht' || aktion === 'termin_buchen') {
         localStorage.setItem('botspace_bookings_count', '1')
@@ -290,6 +315,7 @@ export default function ChatWidget() {
       }])
     } finally {
       setLoading(false)
+      setTimeout(() => inputRef.current?.focus(), 50)
     }
   }
 
@@ -318,7 +344,7 @@ export default function ChatWidget() {
 
     // Send to webhook to start qualification (refs are already updated)
     sendToWebhook(
-      `Ich habe den Slot ${slot.datum} um ${slot.uhrzeit} gewählt. Bitte starte die Qualifizierung.`,
+      `Ich habe ${slot.label} gewählt. Bitte starte die Qualifizierung.`,
     )
   }
 
@@ -349,6 +375,7 @@ export default function ChatWidget() {
     setInput('')
     setImg(null)
     setImgErr(null)
+    setQualChips(null)
 
     await sendToWebhook(text, { img: imgToSend })
   }
@@ -360,7 +387,7 @@ export default function ChatWidget() {
   const canSend = !loading && (input.trim().length > 0 || imagePreview !== null)
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  return (
+  return createPortal(
     <>
       {/* Chat window */}
       {shouldRender && (
@@ -497,8 +524,8 @@ export default function ChatWidget() {
             {/* slot_auswahl: Montag / Sonntag */}
             {!loading && activeAktion === 'slot_auswahl' && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
-                {['Montag', 'Sonntag'].map((tag, i) => (
-                  <Chip key={tag} label={tag} onClick={() => sendMessage(tag)} delay={i * 60} />
+                {[{ label: '📅 Montag', value: 'Montag' }, { label: '📅 Sonntag', value: 'Sonntag' }].map((tag, i) => (
+                  <Chip key={tag.value} label={tag.label} onClick={() => sendMessage(tag.value)} delay={i * 60} />
                 ))}
               </div>
             )}
@@ -526,6 +553,15 @@ export default function ChatWidget() {
                 >
                   Keiner der Termine passt? Kontaktformular öffnen
                 </a>
+              </div>
+            )}
+
+            {/* Qualification quick reply chips */}
+            {!loading && qualChips && qualChips.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
+                {qualChips.map((chip, i) => (
+                  <Chip key={chip} label={chip} onClick={() => sendMessage(chip)} delay={i * 50} />
+                ))}
               </div>
             )}
 
@@ -726,6 +762,7 @@ export default function ChatWidget() {
           }
         }
       `}</style>
-    </>
+    </>,
+    document.body,
   )
 }

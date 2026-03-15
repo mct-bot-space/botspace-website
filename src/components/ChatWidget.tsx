@@ -21,6 +21,8 @@ interface QualData {
   email: string
   telefon: string
   website: string
+  gespraech_typ: string
+  kontakt_kanal: string
   branche: string
   support_system: string
   mitarbeiter: string
@@ -43,59 +45,75 @@ const QUICK_REPLIES = [
   'Demo-Gespräch vereinbaren',
 ]
 
+// Steps 1–5: free text | Steps 6–12: chips
 const QUAL_QUESTIONS = [
-  'Wie heißt du und für welches Unternehmen bist du tätig?',
-  'Wie lautet deine E-Mail-Adresse und Telefonnummer?',
-  'Was ist die URL deiner Website?',
-  'In welcher Branche bist du tätig?',
-  'Wie handhabst du aktuell deinen Kundensupport?',
-  'Wie viele Mitarbeiter habt ihr im Kundenservice?',
-  'Wie viele Support-Anfragen bekommt ihr pro Monat?',
-  'Was ist dein Hauptziel mit einem KI-Chatbot?',
+  'Wie heißt du?',                                              // 1
+  'Für welches Unternehmen bist du tätig?',                     // 2
+  'Wie lautet deine E-Mail-Adresse?',                           // 3
+  'Wie lautet deine Telefonnummer?',                            // 4
+  'Was ist die URL deiner Website?',                            // 5
+  'Wie möchtest du das Demo-Gespräch führen?',                  // 6
+  'Wie sollen wir dir den Zoom-Link bzw. die Einwahlnummer schicken?', // 7 (nur bei Zoom)
+  'In welcher Branche bist du tätig?',                          // 8
+  'Wie handhabst du aktuell deinen Kundensupport?',             // 9
+  'Wie viele Mitarbeiter habt ihr im Kundenservice?',           // 10
+  'Wie viele Support-Anfragen bekommt ihr pro Monat?',          // 11
+  'Was ist dein Hauptziel mit einem KI-Chatbot?',               // 12
 ]
 
+// Chips for steps 6–12 — index = step - 6
 const QUAL_CHIPS: { label: string; field: QualKey }[][] = [
-  [ // step 4
-    { label: '🔨 Handwerk', field: 'branche' },
-    { label: '🏥 Arztpraxis/Zahnarzt', field: 'branche' },
-    { label: '🏠 Immobilien', field: 'branche' },
-    { label: '🛒 E-Commerce', field: 'branche' },
-    { label: '🍽️ Gastronomie', field: 'branche' },
-    { label: '💼 Sonstiges', field: 'branche' },
+  [ // step 6: gespraech_typ
+    { label: '📞 Telefon',       field: 'gespraech_typ' },
+    { label: '💻 Zoom Meeting',  field: 'gespraech_typ' },
   ],
-  [ // step 5
-    { label: '❌ Kein System', field: 'support_system' },
-    { label: '📧 Nur E-Mail/Telefon', field: 'support_system' },
-    { label: '🤖 Einfacher Chatbot', field: 'support_system' },
-    { label: '🎫 Helpdesk-System', field: 'support_system' },
+  [ // step 7: kontakt_kanal (nur bei Zoom)
+    { label: '📧 E-Mail',    field: 'kontakt_kanal' },
+    { label: '💬 WhatsApp',  field: 'kontakt_kanal' },
+    { label: '📱 SMS',       field: 'kontakt_kanal' },
+  ],
+  [ // step 8: branche
+    { label: '🔨 Handwerk',           field: 'branche' },
+    { label: '🏥 Arztpraxis/Zahnarzt', field: 'branche' },
+    { label: '🏠 Immobilien',          field: 'branche' },
+    { label: '🛒 E-Commerce',          field: 'branche' },
+    { label: '🍽️ Gastronomie',         field: 'branche' },
+    { label: '💼 Sonstiges',           field: 'branche' },
+  ],
+  [ // step 9: support_system
+    { label: '❌ Kein System',          field: 'support_system' },
+    { label: '📧 Nur E-Mail/Telefon',   field: 'support_system' },
+    { label: '🤖 Einfacher Chatbot',    field: 'support_system' },
+    { label: '🎫 Helpdesk-System',      field: 'support_system' },
     { label: '⚠️ Schlechtes KI-System', field: 'support_system' },
   ],
-  [ // step 6
-    { label: '👤 Nur ich', field: 'mitarbeiter' },
-    { label: '👥 2 Mitarbeiter', field: 'mitarbeiter' },
+  [ // step 10: mitarbeiter
+    { label: '👤 Nur ich',           field: 'mitarbeiter' },
+    { label: '👥 2 Mitarbeiter',     field: 'mitarbeiter' },
     { label: '👨‍👩‍👧 3-5 Mitarbeiter', field: 'mitarbeiter' },
-    { label: '🏢 5-10 Mitarbeiter', field: 'mitarbeiter' },
-    { label: '🏭 10+ Mitarbeiter', field: 'mitarbeiter' },
+    { label: '🏢 5-10 Mitarbeiter',  field: 'mitarbeiter' },
+    { label: '🏭 10+ Mitarbeiter',   field: 'mitarbeiter' },
   ],
-  [ // step 7
-    { label: '📊 Unter 50', field: 'anfragen_monatlich' },
-    { label: '📊 50-200', field: 'anfragen_monatlich' },
-    { label: '📊 200-500', field: 'anfragen_monatlich' },
-    { label: '📊 500-1000', field: 'anfragen_monatlich' },
-    { label: '📊 Über 1000', field: 'anfragen_monatlich' },
+  [ // step 11: anfragen_monatlich
+    { label: '📊 Unter 50',   field: 'anfragen_monatlich' },
+    { label: '📊 50-200',     field: 'anfragen_monatlich' },
+    { label: '📊 200-500',    field: 'anfragen_monatlich' },
+    { label: '📊 500-1000',   field: 'anfragen_monatlich' },
+    { label: '📊 Über 1000',  field: 'anfragen_monatlich' },
   ],
-  [ // step 8
-    { label: '📉 Anfragen reduzieren', field: 'hauptziel' },
-    { label: '🎯 Leads generieren', field: 'hauptziel' },
-    { label: '📅 Terminbuchung automatisieren', field: 'hauptziel' },
-    { label: '💰 Kosten senken', field: 'hauptziel' },
+  [ // step 12: hauptziel
+    { label: '📉 Anfragen reduzieren',           field: 'hauptziel' },
+    { label: '🎯 Leads generieren',              field: 'hauptziel' },
+    { label: '📅 Terminbuchung automatisieren',  field: 'hauptziel' },
+    { label: '💰 Kosten senken',                 field: 'hauptziel' },
   ],
 ]
 
 const EMPTY_QUAL: QualData = {
-  name: '', unternehmen: '', email: '', telefon: '',
-  website: '', branche: '', support_system: '',
-  mitarbeiter: '', anfragen_monatlich: '', hauptziel: '',
+  name: '', unternehmen: '', email: '', telefon: '', website: '',
+  gespraech_typ: '', kontakt_kanal: '',
+  branche: '', support_system: '', mitarbeiter: '',
+  anfragen_monatlich: '', hauptziel: '',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -178,14 +196,13 @@ export default function ChatWidget() {
     loadSavedMessages()?.some(m => m.role === 'user') ?? false
   )
 
-  // Webhook action state
   const [activeAktion, setActiveAktion] = useState<string | null>(null)
   const [activeSlots, setActiveSlots]   = useState<Slot[]>([])
 
-  // Qualification flow
-  const [qualStep, setQualStep]   = useState(0)   // 0=inactive, 1–8=current step
-  const [qualDone, setQualDone]   = useState(false)
-  const [qualData, setQualData]   = useState<QualData>(EMPTY_QUAL)
+  // Qualification flow — 0=inactive, 1–12=current step
+  const [qualStep, setQualStep]       = useState(0)
+  const [qualDone, setQualDone]       = useState(false)
+  const [qualData, setQualData]       = useState<QualData>(EMPTY_QUAL)
   const [pendingSlot, setPendingSlot] = useState<Slot | null>(null)
 
   const bottomRef    = useRef<HTMLDivElement>(null)
@@ -225,7 +242,7 @@ export default function ChatWidget() {
     e.target.value = ''
   }
 
-  // ── Booking send (called after qual completion) ────────────────────────────
+  // ── Booking ────────────────────────────────────────────────────────────────
 
   const sendBooking = async (finalQual: QualData, slot: Slot) => {
     setLoading(true)
@@ -259,17 +276,26 @@ export default function ChatWidget() {
     }
   }
 
-  // ── Qualification helpers ──────────────────────────────────────────────────
+  // ── Qual flow ──────────────────────────────────────────────────────────────
 
+  // Advance to next step, skipping step 7 if gespraech_typ !== Zoom
   const advanceQual = (updated: QualData, fromStep: number, slot: Slot) => {
-    const next = fromStep + 1
-    if (next <= 8) {
+    let next = fromStep + 1
+
+    // Skip step 7 (kontakt_kanal) if not Zoom
+    if (next === 7 && updated.gespraech_typ !== '💻 Zoom Meeting') {
+      next = 8
+    }
+
+    if (next <= 12) {
       setQualStep(next)
       setTimeout(() => {
-        setMessages(prev => [...prev, { id: Date.now(), role: 'bot', text: QUAL_QUESTIONS[next - 1] }])
+        setMessages(prev => [...prev, {
+          id: Date.now(), role: 'bot',
+          text: QUAL_QUESTIONS[next - 1],
+        }])
       }, 300)
     } else {
-      // Qual complete → send booking
       setQualStep(0)
       setQualDone(true)
       setQualData(updated)
@@ -278,15 +304,15 @@ export default function ChatWidget() {
   }
 
   const handleQualChip = (label: string, field: QualKey) => {
-    const step = qualStep
-    const slot = pendingSlot!
-    const updated: QualData = { ...qualData, [field]: label }
+    const step    = qualStep
+    const slot    = pendingSlot!
+    const updated = { ...qualData, [field]: label }
     setQualData(updated)
     setMessages(prev => [...prev, { id: Date.now(), role: 'user', text: label }])
     advanceQual(updated, step, slot)
   }
 
-  // ── Slot selection → start qual flow ──────────────────────────────────────
+  // ── Slot selection ─────────────────────────────────────────────────────────
 
   const handleSlotSelect = (slot: Slot) => {
     const bookings = parseInt(localStorage.getItem('botspace_bookings_count') || '0')
@@ -299,18 +325,15 @@ export default function ChatWidget() {
       setActiveSlots([])
       return
     }
-
     setPendingSlot(slot)
     setActiveAktion(null)
     setActiveSlots([])
 
     if (qualDone) {
-      // Skip qual, book directly
       sendBooking(qualData, slot)
       return
     }
 
-    // Add user selection bubble, then start qual
     setMessages(prev => [...prev, { id: Date.now(), role: 'user', text: slot.label }])
     setQualStep(1)
     setTimeout(() => {
@@ -321,7 +344,7 @@ export default function ChatWidget() {
     }, 300)
   }
 
-  // ── Send message (webhook) ─────────────────────────────────────────────────
+  // ── Send message ───────────────────────────────────────────────────────────
 
   const sendMessage = async (
     overrideText?: string,
@@ -330,6 +353,15 @@ export default function ChatWidget() {
     const raw  = overrideText ?? input
     const text = sanitize(raw)
     if (!text || loading) return
+
+    // /reset command
+    if (text === '/reset') {
+      localStorage.removeItem('botspace_session_id')
+      localStorage.removeItem('botspace_chat_history')
+      localStorage.removeItem('botspace_bookings_count')
+      window.location.reload()
+      return
+    }
 
     if (!greetingChipsUsed) setGreetingChipsUsed(true)
 
@@ -344,26 +376,20 @@ export default function ChatWidget() {
     setImg(null)
     setImgErr(null)
 
-    // ── Qual flow: intercept free-text steps 1–3 ──────────────────────────
-    if (currentStep >= 1 && currentStep <= 3) {
+    // ── Qual flow: free-text steps 1–5 ────────────────────────────────────
+    if (currentStep >= 1 && currentStep <= 5) {
       const updated = { ...qualData }
-      if (currentStep === 1) {
-        const parts = text.split(',').map(p => p.trim())
-        updated.name = parts[0] || text
-        updated.unternehmen = parts.slice(1).join(',').trim()
-      } else if (currentStep === 2) {
-        const parts = text.split(',').map(p => p.trim())
-        updated.email   = parts[0] || text
-        updated.telefon = parts.slice(1).join(',').trim()
-      } else {
-        updated.website = text
-      }
+      if (currentStep === 1)      updated.name        = text
+      else if (currentStep === 2) updated.unternehmen = text
+      else if (currentStep === 3) updated.email       = text
+      else if (currentStep === 4) updated.telefon     = text
+      else if (currentStep === 5) updated.website     = text
       setQualData(updated)
       advanceQual(updated, currentStep, pendingSlot!)
       return
     }
 
-    // ── Normal webhook call ────────────────────────────────────────────────
+    // ── Webhook call ───────────────────────────────────────────────────────
     setActiveAktion(null)
     setActiveSlots([])
     setLoading(true)
@@ -374,25 +400,24 @@ export default function ChatWidget() {
         session_id: sessionId,
         kunde: 'padel-heintz',
       }
-      if (imgToSend)   body.bild = imgToSend
+      if (imgToSend)    body.bild = imgToSend
       if (extraPayload) Object.assign(body, extraPayload)
 
-      const res  = await fetch('https://mctecommerce.app.n8n.cloud/webhook/bot-space-chatbot', {
+      const res   = await fetch('https://mctecommerce.app.n8n.cloud/webhook/bot-space-chatbot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       const data  = await res.json()
-      const reply: string      = data?.antwort ?? 'Ich konnte leider keine Antwort erhalten.'
+      const reply: string       = data?.antwort ?? 'Ich konnte leider keine Antwort erhalten.'
       const aktion: string | null = data?.aktion ?? null
-      const slots: Slot[]      = Array.isArray(data?.slots) ? data.slots : []
+      const slots: Slot[]       = Array.isArray(data?.slots) ? data.slots : []
 
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'bot', text: reply }])
 
       if (aktion === 'termin_gebucht') {
         localStorage.setItem('botspace_bookings_count', '1')
       } else if (aktion === 'slots_anzeigen') {
-        // Show slots directly — qual happens AFTER slot selection
         setActiveAktion('slots_anzeigen')
         setActiveSlots(slots)
       } else {
@@ -413,7 +438,7 @@ export default function ChatWidget() {
   }
 
   const canSend       = !loading && (input.trim().length > 0 || imagePreview !== null)
-  const showQualChips = !loading && qualStep >= 4 && qualStep <= 8
+  const showQualChips = !loading && qualStep >= 6 && qualStep <= 12
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -523,7 +548,7 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {/* slots_anzeigen: Slot-Chips + "Keiner passt?" Link */}
+            {/* slots_anzeigen */}
             {!loading && activeAktion === 'slots_anzeigen' && activeSlots.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
@@ -538,20 +563,17 @@ export default function ChatWidget() {
                 <a
                   href="#contact"
                   onClick={() => setOpen(false)}
-                  style={{
-                    fontSize: 12, color: '#6b7280', textDecoration: 'underline',
-                    cursor: 'pointer', marginTop: 2,
-                  }}
+                  style={{ fontSize: 12, color: '#6b7280', textDecoration: 'underline', cursor: 'pointer', marginTop: 2 }}
                 >
                   Keiner der Termine passt? Kontaktformular öffnen
                 </a>
               </div>
             )}
 
-            {/* Qualification chips (steps 4–8) */}
+            {/* Qualification chips (steps 6–12) */}
             {showQualChips && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
-                {QUAL_CHIPS[qualStep - 4].map(({ label, field }) => (
+                {QUAL_CHIPS[qualStep - 6].map(({ label, field }) => (
                   <Chip key={label} label={label} onClick={() => handleQualChip(label, field)} />
                 ))}
               </div>
@@ -604,7 +626,7 @@ export default function ChatWidget() {
                 ref={inputRef} type="text" value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder={qualStep >= 1 && qualStep <= 3 ? 'Deine Antwort…' : 'Nachricht schreiben…'}
+                placeholder={qualStep >= 1 && qualStep <= 5 ? 'Deine Antwort…' : 'Nachricht schreiben…'}
                 disabled={loading} maxLength={500}
                 style={{
                   flex: 1, border: '1.5px solid #e0e7ef', borderRadius: 10,

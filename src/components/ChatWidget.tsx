@@ -301,7 +301,7 @@ export default function ChatWidget() {
       setActiveButtons(resolvedButtons)
 
       // Determine hint type for buttons
-      const isQuali = /Frage \d+\/12/.test(botText)
+      const isQuali = /Frage (6|7|8|9|1[0-2])\/12/.test(botText)
       setButtonsHint(resolvedButtons.length > 0 && isQuali ? 'quali' : null)
 
       // Handle actions

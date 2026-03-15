@@ -251,11 +251,17 @@ export default function ChatWidget() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nachricht: 'Termin buchen',
+          nachricht: `Termin buchen am ${slot.datum} um ${slot.uhrzeit} Uhr`,
           session_id: sessionId,
-          kunde: 'padel-heintz',
+          kunde: 'bot-space',
           qualifizierung: finalQual,
-          extraktion: { datum: slot.datum, uhrzeit: slot.uhrzeit },
+          extraktion: {
+            datum: slot.datum,
+            uhrzeit: slot.uhrzeit,
+            name: finalQual.name,
+            email: finalQual.email,
+            telefon: finalQual.telefon,
+          },
         }),
       })
       const data = await res.json()

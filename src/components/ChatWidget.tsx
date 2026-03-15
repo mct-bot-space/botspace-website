@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -7,8 +7,6 @@ interface Message {
   role: 'bot' | 'user'
   text: string
   image?: string
-  type?: 'summary'
-  summaryData?: Record<string, string>
 }
 
 interface Slot {
@@ -29,21 +27,6 @@ const QUICK_REPLIES = [
   'Wie läuft die Umsetzung ab?',
   'Demo-Gespräch vereinbaren',
 ]
-
-const FIELD_LABELS: Record<string, string> = {
-  name: 'Name',
-  unternehmen: 'Unternehmen',
-  email: 'E-Mail',
-  telefon: 'Telefon',
-  website: 'Website',
-  branche: 'Branche',
-  support_system: 'Support-System',
-  mitarbeiter: 'Mitarbeiter',
-  anfragen_monatlich: 'Monatl. Anfragen',
-  hauptziel: 'Hauptziel',
-  gespraech_typ: 'Gesprächstyp',
-  kontakt_kanal: 'Kontaktkanal',
-}
 
 const WEBHOOK_URL = 'https://mctecommerce.app.n8n.cloud/webhook/bot-space-chatbot'
 
@@ -80,10 +63,6 @@ function loadSavedMessages(): Message[] | null {
   return null
 }
 
-function cleanValue(s: string): string {
-  return (s || '').trim().replace(/^=+/, '')
-}
-
 // ─── Chip Component ───────────────────────────────────────────────────────────
 
 function Chip({ label, onClick, delay = 0 }: { label: string; onClick: () => void; delay?: number }) {
@@ -111,72 +90,6 @@ function Chip({ label, onClick, delay = 0 }: { label: string; onClick: () => voi
     >
       {label}
     </button>
-  )
-}
-
-// ─── Summary Card Component ──────────────────────────────────────────────────
-
-function SummaryCard({
-  data,
-  showButtons,
-  onBook,
-  onEdit,
-}: {
-  data: Record<string, string>
-  showButtons: boolean
-  onBook: () => void
-  onEdit: () => void
-}) {
-  return (
-    <div style={{
-      background: '#fff',
-      borderRadius: 12,
-      border: '1.5px solid #1A73E8',
-      padding: '14px 16px',
-      maxWidth: '100%',
-      animation: 'msgFadeIn 0.3s ease both',
-    }}>
-      <div style={{
-        fontWeight: 700, fontSize: 15, color: '#1A73E8',
-        marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
-      }}>
-        📋 Zusammenfassung
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {Object.entries(data).filter(([, v]) => v).map(([key, value]) => (
-          <div key={key} style={{ display: 'flex', fontSize: 13, lineHeight: 1.4 }}>
-            <span style={{ color: '#6b7280', minWidth: 110, flexShrink: 0, fontWeight: 500 }}>
-              {FIELD_LABELS[key] || key}:
-            </span>
-            <span style={{ color: '#1a1a2e', fontWeight: 400 }}>{value}</span>
-          </div>
-        ))}
-      </div>
-      {showButtons && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          <button type="button" onClick={onBook} style={{
-            flex: 1, background: '#1A73E8', color: '#fff', border: 'none',
-            borderRadius: 10, padding: '10px 0', fontWeight: 600, fontSize: 14,
-            cursor: 'pointer', transition: 'background 0.2s',
-          }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#1557b0')}
-            onMouseLeave={e => (e.currentTarget.style.background = '#1A73E8')}
-          >
-            ✅ Termin jetzt buchen
-          </button>
-          <button type="button" onClick={onEdit} style={{
-            flex: 1, background: '#fff', color: '#1A73E8', border: '1.5px solid #1A73E8',
-            borderRadius: 10, padding: '10px 0', fontWeight: 600, fontSize: 14,
-            cursor: 'pointer', transition: 'background 0.2s, color 0.2s',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#1A73E8'; e.currentTarget.style.color = '#fff' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1A73E8' }}
-          >
-            ✏️ Ändern
-          </button>
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -208,11 +121,21 @@ export default function ChatWidget() {
   const [activeAktion, setActiveAktion] = useState<string | null>(null)
   const [activeSlots, setActiveSlots] = useState<Slot[]>([])
 
-  // AI-driven qualification
-  const [qualModus, setQualModus] = useState(false)
-  const [qualDaten, setQualDaten] = useState<Record<string, string>>({})
-  const [qualZusammenfassung, setQualZusammenfassung] = useState<Record<string, string> | null>(null)
-  const [pendingSlot, setPendingSlot] = useState<Slot | null>(null)
+  // Qualification state — refs to avoid stale closures in async calls
+  const [modus, setModus] = useState<'chat' | 'qualifizierung'>('chat')
+  const [, setGewaehlterSlot] = useState<{ datum: string; uhrzeit: string } | null>(null)
+  const modusRef = useRef<'chat' | 'qualifizierung'>('chat')
+  const slotRef = useRef<{ datum: string; uhrzeit: string } | null>(null)
+
+  // Keep refs in sync with state
+  const updateModus = (m: 'chat' | 'qualifizierung') => {
+    setModus(m)
+    modusRef.current = m
+  }
+  const updateSlot = (s: { datum: string; uhrzeit: string } | null) => {
+    setGewaehlterSlot(s)
+    slotRef.current = s
+  }
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(
@@ -291,52 +214,84 @@ export default function ChatWidget() {
     e.target.value = ''
   }
 
-  // ── Booking ────────────────────────────────────────────────────────────────
+  // ── Core webhook call (uses refs for always-current values) ────────────────
 
-  const sendBooking = useCallback(async (finalQual: Record<string, string>, slot: Slot) => {
+  const sendToWebhook = async (
+    text: string,
+    opts?: { img?: string | null },
+  ) => {
     setLoading(true)
-    setQualZusammenfassung(null)
+    setActiveAktion(null)
+    setActiveSlots([])
+
     try {
-      const cleaned: Record<string, string> = {}
-      for (const [k, v] of Object.entries(finalQual)) {
-        cleaned[k] = cleanValue(v)
+      const body: Record<string, unknown> = {
+        nachricht: text,
+        session_id: sessionId,
+        kunde: 'bot-space',
+        modus: modusRef.current,
       }
+
+      if (opts?.img) body.bild = opts.img
+
+      // In qualification mode, always send selected slot data
+      if (modusRef.current === 'qualifizierung' && slotRef.current) {
+        body.extraktion = {
+          datum: slotRef.current.datum,
+          uhrzeit: slotRef.current.uhrzeit,
+        }
+      }
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000)
 
       const res = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nachricht: `Termin buchen am ${slot.datum} um ${slot.uhrzeit} Uhr`,
-          session_id: sessionId,
-          kunde: 'bot-space',
-          qualifizierung: cleaned,
-          extraktion: {
-            datum: slot.datum,
-            uhrzeit: slot.uhrzeit,
-            name: cleanValue(finalQual.name || ''),
-            email: cleanValue(finalQual.email || ''),
-            telefon: cleanValue(finalQual.telefon || ''),
-          },
-        }),
+        body: JSON.stringify(body),
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
+
       const data = await res.json()
-      if (data?.aktion === 'termin_gebucht') {
-        localStorage.setItem('botspace_bookings_count', '1')
+      const reply: string = data?.antwort || ''
+      const aktion: string = data?.aktion || 'none'
+      const slots: Slot[] = Array.isArray(data?.slots) ? data.slots : []
+
+      // Determine bot message
+      let botText = reply
+      if (!botText && (aktion === 'termin_gebucht' || aktion === 'termin_buchen')) {
+        botText = '✅ Dein Termin wurde erfolgreich gebucht! Du erhältst eine Bestätigung per E-Mail.'
       }
+      if (!botText) {
+        botText = 'Ich konnte leider keine Antwort erhalten. Bitte versuche es nochmal.'
+      }
+
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'bot', text: botText }])
+
+      // Handle actions
+      if (aktion === 'termin_gebucht' || aktion === 'termin_buchen') {
+        localStorage.setItem('botspace_bookings_count', '1')
+        updateModus('chat')
+        updateSlot(null)
+      } else if (aktion === 'slot_auswahl') {
+        setActiveAktion('slot_auswahl')
+      } else if (aktion === 'slots_anzeigen') {
+        setActiveAktion('slots_anzeigen')
+        setActiveSlots(slots)
+      }
+    } catch (err) {
+      const isTimeout = err instanceof DOMException && err.name === 'AbortError'
       setMessages(prev => [...prev, {
         id: Date.now() + 1, role: 'bot',
-        text: data?.antwort ?? '✅ Dein Termin wurde bestätigt! Wir melden uns per E-Mail.',
-      }])
-      setQualModus(false)
-    } catch {
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1, role: 'bot',
-        text: 'Verbindungsproblem. Bitte versuche es gleich nochmal.',
+        text: isTimeout
+          ? 'Das dauert etwas länger als erwartet. Bitte warte kurz und versuche es nochmal.'
+          : 'Verbindungsproblem. Bitte versuche es gleich nochmal.',
       }])
     } finally {
       setLoading(false)
     }
-  }, [sessionId])
+  }
 
   // ── Slot selection ─────────────────────────────────────────────────────────
 
@@ -352,52 +307,24 @@ export default function ChatWidget() {
       return
     }
 
-    setPendingSlot(slot)
+    // Save slot & switch to qualification mode (via refs for immediate availability)
+    updateSlot({ datum: slot.datum, uhrzeit: slot.uhrzeit })
+    updateModus('qualifizierung')
     setActiveAktion(null)
     setActiveSlots([])
 
+    // Show user selection
     setMessages(prev => [...prev, { id: Date.now(), role: 'user', text: slot.label }])
 
-    // Start AI-driven qualification
-    setQualModus(true)
-    setQualDaten({})
-    setQualZusammenfassung(null)
-
-    setTimeout(() => {
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1, role: 'bot',
-        text: 'Perfekt! 📅 Bevor ich deinen Termin verbindlich bestätige, brauche ich noch ein paar Infos von dir.\n\nWie heißt du?',
-      }])
-    }, 400)
-  }
-
-  // ── Summary actions ────────────────────────────────────────────────────────
-
-  const handleBookFromSummary = () => {
-    if (!qualZusammenfassung || !pendingSlot) return
-    setMessages(prev => [...prev, { id: Date.now(), role: 'user', text: '✅ Ja, Termin buchen!' }])
-    sendBooking(qualZusammenfassung, pendingSlot)
-  }
-
-  const handleEditFromSummary = () => {
-    setQualZusammenfassung(null)
-    setMessages(prev => [...prev,
-      { id: Date.now(), role: 'user', text: '✏️ Ich möchte etwas ändern.' },
-    ])
-    setTimeout(() => {
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1, role: 'bot',
-        text: 'Kein Problem! Was möchtest du ändern?',
-      }])
-    }, 400)
+    // Send to webhook to start qualification (refs are already updated)
+    sendToWebhook(
+      `Ich habe den Slot ${slot.datum} um ${slot.uhrzeit} gewählt. Bitte starte die Qualifizierung.`,
+    )
   }
 
   // ── Send message ───────────────────────────────────────────────────────────
 
-  const sendMessage = async (
-    overrideText?: string,
-    extraPayload?: Record<string, unknown>,
-  ) => {
+  const sendMessage = async (overrideText?: string) => {
     const raw = overrideText ?? input
     const text = sanitize(raw)
     if (!text || loading) return
@@ -423,71 +350,7 @@ export default function ChatWidget() {
     setImg(null)
     setImgErr(null)
 
-    // ── Webhook call ──────────────────────────────────────────────────────
-    setActiveAktion(null)
-    setActiveSlots([])
-    setLoading(true)
-
-    try {
-      const body: Record<string, unknown> = {
-        nachricht: text,
-        session_id: sessionId,
-        kunde: 'bot-space',
-      }
-      if (imgToSend) body.bild = imgToSend
-      if (extraPayload) Object.assign(body, extraPayload)
-
-      // Add qualification context
-      if (qualModus) {
-        body.modus = 'qualifizierung'
-        body.qualifizierung_bisher = qualDaten
-      }
-
-      const res = await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      const data = await res.json()
-      const reply: string = data?.antwort ?? 'Ich konnte leider keine Antwort erhalten.'
-      const aktion: string | null = data?.aktion ?? null
-      const slots: Slot[] = Array.isArray(data?.slots) ? data.slots : []
-
-      // Merge extracted qualification data
-      if (qualModus && data?.extrahierte_daten && typeof data.extrahierte_daten === 'object') {
-        setQualDaten(prev => ({ ...prev, ...data.extrahierte_daten }))
-      }
-
-      // Handle qualification completion
-      if (aktion === 'qualifizierung_fertig' && data?.zusammenfassung) {
-        const zusammenfassung = data.zusammenfassung as Record<string, string>
-        setQualZusammenfassung(zusammenfassung)
-        setQualDaten(zusammenfassung)
-        setMessages(prev => [...prev, {
-          id: Date.now() + 1, role: 'bot', text: reply,
-          type: 'summary', summaryData: zusammenfassung,
-        }])
-      } else {
-        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'bot', text: reply }])
-      }
-
-      if (aktion === 'termin_gebucht') {
-        localStorage.setItem('botspace_bookings_count', '1')
-        setQualModus(false)
-      } else if (aktion === 'slots_anzeigen') {
-        setActiveAktion('slots_anzeigen')
-        setActiveSlots(slots)
-      } else if (aktion !== 'qualifizierung_weiter' && aktion !== 'qualifizierung_fertig') {
-        setActiveAktion(aktion)
-      }
-    } catch {
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1, role: 'bot',
-        text: 'Verbindungsproblem. Bitte versuche es gleich nochmal.',
-      }])
-    } finally {
-      setLoading(false)
-    }
+    await sendToWebhook(text, { img: imgToSend })
   }
 
   const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -598,18 +461,6 @@ export default function ChatWidget() {
                   </div>
                 </div>
 
-                {/* Summary card */}
-                {msg.type === 'summary' && msg.summaryData && (
-                  <div style={{ marginTop: 10, maxWidth: '88%' }}>
-                    <SummaryCard
-                      data={msg.summaryData}
-                      showButtons={qualZusammenfassung !== null}
-                      onBook={handleBookFromSummary}
-                      onEdit={handleEditFromSummary}
-                    />
-                  </div>
-                )}
-
                 {/* Greeting chips */}
                 {msg.id === GREETING_ID && !greetingChipsUsed && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>
@@ -643,7 +494,7 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {/* slot_auswahl chips */}
+            {/* slot_auswahl: Montag / Sonntag */}
             {!loading && activeAktion === 'slot_auswahl' && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 4 }}>
                 {['Montag', 'Sonntag'].map((tag, i) => (
@@ -741,7 +592,7 @@ export default function ChatWidget() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder={qualModus ? 'Deine Antwort…' : 'Nachricht schreiben…'}
+                placeholder={modus === 'qualifizierung' ? 'Deine Antwort…' : 'Nachricht schreiben…'}
                 disabled={loading}
                 maxLength={500}
                 style={{

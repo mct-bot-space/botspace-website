@@ -1,5 +1,3 @@
-import ChatWidget from './ChatWidget'
-
 export default function DemoChat() {
   return (
     <section
@@ -45,14 +43,6 @@ export default function DemoChat() {
         }}>
           Stell ihm deine Fragen — oder buche direkt deinen Demo-Termin.
         </p>
-
-        {/* Embedded Chat */}
-        <div style={{
-          maxWidth: 480,
-          margin: '0 auto',
-        }}>
-          <ChatWidget embedded />
-        </div>
       </div>
     </section>
   )

@@ -15,7 +15,6 @@ import DemoChat from './components/DemoChat'
 import Pricing from './components/Pricing'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
-import ChatWidget from './components/ChatWidget'
 import Impressum from './pages/Impressum'
 import Datenschutz from './pages/Datenschutz'
 import AGB from './pages/AGB'
@@ -32,7 +31,6 @@ function LandingPage() {
         <Contact />
       </main>
       <Footer />
-      <ChatWidget />
     </div>
   )
 }

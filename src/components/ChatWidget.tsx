@@ -29,7 +29,7 @@ const QUICK_REPLIES = [
   'Demo-Gespräch vereinbaren',
 ]
 
-const WEBHOOK_URL = 'https://mctecommerce.app.n8n.cloud/webhook/bot-space-chatbot'
+const WEBHOOK_URL = import.meta.env.VITE_CHAT_WEBHOOK_URL as string
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

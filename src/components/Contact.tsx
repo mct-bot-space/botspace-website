@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
-const CONTACT_WEBHOOK = 'https://mctecommerce.app.n8n.cloud/webhook/bot-space-kontakt'
+const CONTACT_WEBHOOK = import.meta.env.VITE_CONTACT_WEBHOOK_URL as string
 
 export default function Contact() {
   const [form, setForm] = useState({
@@ -339,7 +340,7 @@ export default function Contact() {
 
                   <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', lineHeight: 1.5 }}>
                     Mit dem Absenden stimmst du unserer{' '}
-                    <a href="#" style={{ color: '#1A73E8' }}>Datenschutzerklärung</a> zu.
+                    <Link to="/datenschutz" style={{ color: '#1A73E8' }}>Datenschutzerklärung</Link> zu.
                   </p>
                 </form>
               </>

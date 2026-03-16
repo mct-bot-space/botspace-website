@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 export default function Footer() {
   return (
     <footer style={{
@@ -118,8 +120,12 @@ export default function Footer() {
             © 2026 MCT Commerce – Alle Rechte vorbehalten
           </p>
           <div style={{ display: 'flex', gap: 24 }}>
-            {['Datenschutz', 'Impressum', 'AGB'].map(l => (
-              <a key={l} href="#" style={{
+            {[
+              { label: 'Datenschutz', to: '/datenschutz' },
+              { label: 'Impressum', to: '/impressum' },
+              { label: 'AGB', to: '/agb' },
+            ].map(l => (
+              <Link key={l.label} to={l.to} style={{
                 fontSize: 13,
                 color: 'rgba(255,255,255,0.3)',
                 textDecoration: 'none',
@@ -128,8 +134,8 @@ export default function Footer() {
               onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}
               >
-                {l}
-              </a>
+                {l.label}
+              </Link>
             ))}
           </div>
         </div>

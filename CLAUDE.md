@@ -1,35 +1,45 @@
-# CLAUDE.md
+# CLAUDE.md — Bot-Space Website
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Was ist dieses Projekt?
+Marketing-Website für Bot-Space (Marke von MCT Commerce, Inhaber: Mika Trauth, Dudenhofen/Speyer).
+Bot-Space ist eine deutsche KI-Chatbot-Agentur für KMU (B2B).
+Diese Website ist die **Marketing-/Verkaufsseite** — kein Backend, kein Dashboard.
 
-## Commands
+## Tech Stack
+- React 19 + TypeScript (strict mode)
+- Vite 7
+- Tailwind CSS 4
+- react-router-dom (Routing)
+- Backend: n8n Cloud Webhooks (kein lokaler Server)
 
-All commands run from `/Users/mikatrauth/Desktop/Website Bot Space/botspace/`:
+## Projektstruktur
+- src/components/ — alle UI-Komponenten
+- src/pages/ — Impressum.tsx, Datenschutz.tsx, AGB.tsx
+- src/App.tsx — Routing + Layout
+- botspace/public/ — Assets (Logos etc.)
+- .env — Webhook URLs (NIEMALS committen)
 
-```bash
-npm run dev        # Start dev server with HMR
-npm run build      # Type-check + build to dist/
-npm run lint       # Run ESLint
-npm run preview    # Preview production build locally
-```
+## Business-Kontext
+Pakete: STARTER (990€ + 149€/Mo), PRO (1.990€ + 299€/Mo), ENTERPRISE (3.990€ + 599€/Mo)
+Pilot-Kunde: Padel Club Heintz — live ab Juni 2026
+Ziel: 5–10 Kunden bis August 2026
 
-No test framework is configured.
+## Coding-Regeln (IMMER einhalten)
+- TypeScript strict mode — keine any-Types
+- Alle Texte auf Deutsch
+- Webhook URLs immer in .env (VITE_CHAT_WEBHOOK_URL, VITE_CONTACT_WEBHOOK_URL)
+- Keine Secrets im Code oder Git
+- shadcn/ui für neue UI-Komponenten
+- Mobile-first Design
 
-## Architecture
+## Bekannte Bugs
+- Footer Legal-Links (/impressum, /datenschutz, /agb) navigieren nicht korrekt — scrollen nur nach oben. React Router Problem, noch nicht gefixt.
 
-This is a single-page marketing website for **Bot Space** — a German B2B AI chatbot agency. It is a React 19 + TypeScript SPA built with Vite and Tailwind CSS 4.
+## Geplante Erweiterungen (NICHT in diesem Repo)
+- HelpDesk Dashboard → separates Next.js Projekt (app.bot-space.de)
+- Langfristig: Migration dieser Website auf Next.js
 
-**Page structure** (`App.tsx`) renders sections top-to-bottom: Navbar → Hero → Problem → Solutions → Benefits → DemoChat → Pricing → About → Contact → Footer → ChatWidget.
-
-**`ChatWidget.tsx`** is the most complex component (~32KB). It handles:
-- Persistent message history via `localStorage`
-- Streaming responses from the n8n webhook
-- Dynamic button rendering driven by backend responses
-- Markdown link formatting
-- A 12-step qualification flow with fallback buttons
-
-**Backend integration** (n8n webhooks):
-- Chat: `https://mctecommerce.app.n8n.cloud/webhook/bot-space-chatbot`
-- Contact form: `https://mctecommerce.app.n8n.cloud/webhook/bot-space-kontakt`
-
-All UI copy is in **German**. Primary brand color is `#1A73E8`.
+## Workflow
+- Änderungen immer committen + auf GitHub pushen
+- Branch: main → deployed via Vercel automatisch
+- Vor jedem Push: npm run build muss ohne Fehler durchlaufen
